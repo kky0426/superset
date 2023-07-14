@@ -59,6 +59,7 @@ from superset.superset_typing import FlaskResponse
 from superset.utils import core as utils
 from superset.views.base import CsvResponse, generate_download_headers, json_success
 from superset.views.base_api import BaseSupersetApi, requires_json, statsd_metrics
+from superset.sqllab.utils import masking_in_dicionary_value
 
 config = app.config
 logger = logging.getLogger(__name__)
@@ -242,6 +243,7 @@ class SqlLabRestApi(BaseSupersetApi):
         key = params.get("key")
         rows = params.get("rows")
         result = SqlExecutionResultsCommand(key=key, rows=rows).run()
+        result["data"] = list(map(lambda item: masking_in_dicionary_value(item), result["data"]))
         # return the result without special encoding
         return json_success(
             json.dumps(
@@ -314,6 +316,7 @@ class SqlLabRestApi(BaseSupersetApi):
                 if command_result["status"] == SqlJsonExecutionStatus.QUERY_IS_RUNNING
                 else 200
             )
+            logger.info("api/execute:%s",command_result)
             # return the execution result without special encoding
             return json_success(command_result["payload"], response_status)
         except SqlLabException as ex:
@@ -323,7 +326,7 @@ class SqlLabRestApi(BaseSupersetApi):
                 403 if isinstance(ex, QueryIsForbiddenToAccessException) else ex.status
             )
             return self.response(response_status, **payload)
-
+    
     @staticmethod
     def _create_sql_json_command(
         execution_context: SqlJsonExecutionContext, log_params: Optional[dict[str, Any]]
@@ -363,3 +366,4 @@ class SqlLabRestApi(BaseSupersetApi):
                 is_feature_enabled("SQLLAB_BACKEND_PERSISTENCE"),
             )
         return sql_json_executor
+

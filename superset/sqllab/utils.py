@@ -20,6 +20,7 @@ import pyarrow as pa
 
 from superset.common.db_query_status import QueryStatus
 
+MASKING_COLUMN_LIST = ["phone", "email"]
 
 def apply_display_max_row_configuration_if_require(  # pylint: disable=invalid-name
     sql_results: dict[str, Any], max_rows_in_result: int
@@ -56,3 +57,9 @@ def write_ipc_buffer(table: pa.Table) -> pa.Buffer:
         writer.write_table(table)
 
     return sink.getvalue()
+
+def masking_in_dicionary_value(dic: dict[str, Any]) -> dict:
+    for key,value in dic.items():
+        if key in MASKING_COLUMN_LIST:
+            dic[key] = "*"*len(str(value))
+    return dic
