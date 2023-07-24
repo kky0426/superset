@@ -52,6 +52,10 @@ def collect_request_payload() -> dict[str, Any]:
         **request.args.to_dict(),
     }
 
+    # role 생성/수정 시 포함된 모든 permission payload에 저장
+    if "permissions" in payload:
+        payload["permissions"] = request.form.getlist("permissions")
+
     # save URL match pattern in addition to the request path
     url_rule = str(request.url_rule)
     if url_rule != request.path:
@@ -64,7 +68,6 @@ def collect_request_payload() -> dict[str, Any]:
     # delete empty rison object
     if "rison" in payload and not payload["rison"]:
         del payload["rison"]
-
 
     return payload
 
