@@ -13,5 +13,5 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column("logs", "request_id")
+    op.drop_column("logs", "request_ip")
 
