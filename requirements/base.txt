@@ -243,7 +243,7 @@ pytz==2021.3
     #   celery
     #   flask-babel
     #   pandas
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   apache-superset
     #   apispec
