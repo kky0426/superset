@@ -31,6 +31,11 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 # NPM ci first, as to NOT invalidate previous steps except for when package.json changes
 WORKDIR /app/superset-frontend
 
+
+RUN apt-get update || : && apt-get install -y \
+    python3 \
+    build-essential
+
 COPY ./docker/frontend-mem-nag.sh /
 
 RUN /frontend-mem-nag.sh

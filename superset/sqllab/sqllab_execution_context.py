@@ -31,6 +31,7 @@ from superset.utils import core as utils
 from superset.utils.core import apply_max_row_limit, get_user_id
 from superset.utils.dates import now_as_float
 from superset.views.utils import get_cta_schema_name
+from superset.sqllab.utils import masking_in_dicionary_value
 
 if TYPE_CHECKING:
     from superset.connectors.sqla.models import Database
@@ -138,6 +139,8 @@ class SqlJsonExecutionContext:  # pylint: disable=too-many-instance-attributes
         return self._sql_result
 
     def set_execution_result(self, sql_result: SqlResults | None) -> None:
+        if sql_result["data"]:
+            sql_result["data"] = list(map(lambda item: masking_in_dicionary_value(item), sql_result["data"]))
         self._sql_result = sql_result
 
     def create_query(self) -> Query:
