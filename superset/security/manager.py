@@ -35,13 +35,9 @@ from flask_appbuilder.security.sqla.models import (
     User,
     ViewMenu,
 )
-from flask_appbuilder.security.views import (
-    PermissionModelView,
-    PermissionViewModelView,
-    RoleModelView,
-    UserModelView,
-    ViewMenuModelView,
-)
+
+import superset.security.custom_view as custom
+
 from flask_appbuilder.widgets import ListWidget
 from flask_babel import lazy_gettext as _
 from flask_login import AnonymousUserMixin, LoginManager
@@ -117,31 +113,39 @@ class SupersetRoleListWidget(ListWidget):  # pylint: disable=too-few-public-meth
         super().__init__(**kwargs)
 
 
-UserModelView.list_widget = SupersetSecurityListWidget
-RoleModelView.list_widget = SupersetRoleListWidget
-PermissionViewModelView.list_widget = SupersetSecurityListWidget
-PermissionModelView.list_widget = SupersetSecurityListWidget
+custom.UserModelView.list_widget = SupersetSecurityListWidget
+custom.RoleModelView.list_widget = SupersetRoleListWidget
+custom.PermissionViewModelView.list_widget = SupersetSecurityListWidget
+custom.PermissionModelView.list_widget = SupersetSecurityListWidget
 
 # Limiting routes on FAB model views
-UserModelView.include_route_methods = RouteMethod.CRUD_SET | {
+custom.UserModelView.include_route_methods = RouteMethod.CRUD_SET | {
     RouteMethod.ACTION,
     RouteMethod.API_READ,
     RouteMethod.ACTION_POST,
     "userinfo",
 }
-RoleModelView.include_route_methods = RouteMethod.CRUD_SET
-PermissionViewModelView.include_route_methods = {RouteMethod.LIST}
-PermissionModelView.include_route_methods = {RouteMethod.LIST}
-ViewMenuModelView.include_route_methods = {RouteMethod.LIST}
+custom.RoleModelView.include_route_methods = RouteMethod.CRUD_SET
+custom.PermissionViewModelView.include_route_methods = {RouteMethod.LIST}
+custom.PermissionModelView.include_route_methods = {RouteMethod.LIST}
+custom.ViewMenuModelView.include_route_methods = {RouteMethod.LIST}
 
-RoleModelView.list_columns = ["name"]
-RoleModelView.edit_columns = ["name", "permissions", "user"]
-RoleModelView.related_views = []
+custom.RoleModelView.list_columns = ["name"]
+custom.RoleModelView.edit_columns = ["name", "permissions", "user"]
+custom.RoleModelView.related_views = []
 
 
 class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     SecurityManager
 ):
+    rolemodelview = custom.RoleModelView
+    userdbmodelview = custom.UserDBModelView
+    useroauthmodelview = custom.UserOAuthModelView
+    permissionmodelview = custom.PermissionModelView
+    permissionviewmodelview = custom.PermissionViewModelView
+    viewmenumodelview = custom.ViewMenuModelView
+
+
     userstatschartview = None
     READ_ONLY_MODEL_VIEWS = {"Database", "DynamicPlugin"}
 

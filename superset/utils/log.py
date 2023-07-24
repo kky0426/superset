@@ -52,6 +52,10 @@ def collect_request_payload() -> dict[str, Any]:
         **request.args.to_dict(),
     }
 
+    # role 생성/수정 시 포함된 모든 permission payload에 저장
+    if "permissions" in payload:
+        payload["permissions"] = request.form.getlist("permissions")
+
     # save URL match pattern in addition to the request path
     url_rule = str(request.url_rule)
     if url_rule != request.path:
@@ -125,6 +129,7 @@ class AbstractEventLogger(ABC):
         duration_ms: int | None,
         slice_id: int | None,
         referrer: str | None,
+        request_ip: str | None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -145,6 +150,8 @@ class AbstractEventLogger(ABC):
 
         duration_ms = int(duration.total_seconds() * 1000) if duration else None
 
+        request_ip = request.remote_addr if request and request.remote_addr else None
+        
         # Initial try and grab user_id via flask.g.user
         user_id = get_user_id()
 
@@ -192,7 +199,7 @@ class AbstractEventLogger(ABC):
             records = json.loads(payload.get(explode_by))  # type: ignore
         except Exception:  # pylint: disable=broad-except
             records = [payload]
-
+        logger.info("request_ip:%s",request_ip)
         self.log(
             user_id,
             action,
@@ -201,6 +208,7 @@ class AbstractEventLogger(ABC):
             slice_id=slice_id,
             duration_ms=duration_ms,
             referrer=referrer,
+            request_ip=request_ip
         )
 
     @contextmanager
@@ -328,6 +336,7 @@ class DBEventLogger(AbstractEventLogger):
         duration_ms: int | None,
         slice_id: int | None,
         referrer: str | None,
+        request_ip: str | None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -336,6 +345,7 @@ class DBEventLogger(AbstractEventLogger):
 
         records = kwargs.get("records", [])
         logs = []
+        logger.info("records : %s", records)
         for record in records:
             json_string: str | None
             try:
@@ -350,6 +360,7 @@ class DBEventLogger(AbstractEventLogger):
                 duration_ms=duration_ms,
                 referrer=referrer,
                 user_id=user_id,
+                request_ip=request_ip,
             )
             logs.append(log)
         try:
