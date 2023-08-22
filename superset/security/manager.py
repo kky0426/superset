@@ -146,7 +146,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     viewmenumodelview = custom.ViewMenuModelView
 
     authdbview = custom.AuthDBView
-    #authoauthview = custom.AuthOAuthView
+    authoauthview = custom.AuthOAuthView
 
     userstatschartview = None
     READ_ONLY_MODEL_VIEWS = {"Database", "DynamicPlugin"}
