@@ -82,6 +82,7 @@ if TYPE_CHECKING:
     from superset.sql_parse import Table
     from superset.viz import BaseViz
 
+from superset.security.custom_login_manager import CustomLoginManager
 logger = logging.getLogger(__name__)
 
 DATABASE_PERM_REGEX = re.compile(r"^\[.+\]\.\(id\:(?P<id>\d+)\)$")
@@ -145,6 +146,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     permissionviewmodelview = custom.PermissionViewModelView
     viewmenumodelview = custom.ViewMenuModelView
 
+    authdbview = custom.AuthDBView
+    #authoauthview = custom.AuthOAuthView
 
     userstatschartview = None
     READ_ONLY_MODEL_VIEWS = {"Database", "DynamicPlugin"}
@@ -275,11 +278,18 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     guest_user_cls = GuestUser
     pyjwt_for_guest_token = _jwt_global_obj
 
+    # def create_login_manager(self, app: Flask) -> LoginManager:
+    #     lm = CustomLoginManager(app)
+    #     lm.login_view = "login"
+    #     lm.user_loader=(self.load_user)
+    #     lm.request_loader(self.request_loader)
+    #     return lm
+
     def create_login_manager(self, app: Flask) -> LoginManager:
         lm = super().create_login_manager(app)
         lm.request_loader(self.request_loader)
         return lm
-
+    
     def request_loader(self, request: Request) -> Optional[User]:
         # pylint: disable=import-outside-toplevel
         from superset.extensions import feature_flag_manager
