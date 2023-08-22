@@ -82,7 +82,6 @@ if TYPE_CHECKING:
     from superset.sql_parse import Table
     from superset.viz import BaseViz
 
-from superset.security.custom_login_manager import CustomLoginManager
 logger = logging.getLogger(__name__)
 
 DATABASE_PERM_REGEX = re.compile(r"^\[.+\]\.\(id\:(?P<id>\d+)\)$")
