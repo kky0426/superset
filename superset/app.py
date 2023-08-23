@@ -19,7 +19,7 @@ import logging
 import os
 
 from flask import Flask
-
+from flask_session import Session
 from superset.initialization import SupersetAppInitializer
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def create_app() -> Flask:
 
         app_initializer = app.config.get("APP_INITIALIZER", SupersetAppInitializer)(app)
         app_initializer.init_app()
-
+        Session(app)
         return app
 
     # Make sure that bootstrap errors ALWAYS get logged

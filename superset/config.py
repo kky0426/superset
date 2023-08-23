@@ -59,6 +59,8 @@ from superset.utils.encrypt import SQLAlchemyUtilsAdapter
 from superset.utils.log import DBEventLogger
 from superset.utils.logging_configurator import DefaultLoggingConfigurator
 
+import redis 
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -1428,10 +1430,15 @@ TALISMAN_DEV_CONFIG = {
 # See https://flask.palletsprojects.com/en/1.1.x/security/#set-cookie-options
 # for details
 #
+
 SESSION_COOKIE_HTTPONLY = True  # Prevent cookie from being read by frontend JS?
 SESSION_COOKIE_SECURE = False  # Prevent cookie from being transmitted over non-tls?
 SESSION_COOKIE_SAMESITE: Literal["None", "Lax", "Strict"] | None = "Lax"
 
+SESSION_TYPE = 'redis'
+SESSION_PERMANENT = False
+SESSION_USE_SIGNER = True
+SESSION_REDIS = redis.Redis(host='redis', port=6379)
 # Cache static resources.
 SEND_FILE_MAX_AGE_DEFAULT = int(timedelta(days=365).total_seconds())
 
