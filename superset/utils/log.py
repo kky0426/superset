@@ -33,6 +33,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from superset.extensions import stats_logger_manager
 from superset.utils.core import get_user_id, LoggerLevel
+from superset.utils.s3_service import logging_to_s3
 
 if TYPE_CHECKING:
     from superset.stats_logger import BaseStatsLogger
@@ -199,7 +200,7 @@ class AbstractEventLogger(ABC):
             records = json.loads(payload.get(explode_by))  # type: ignore
         except Exception:  # pylint: disable=broad-except
             records = [payload]
-        logger.info("request_ip:%s",request_ip)
+
         self.log(
             user_id,
             action,
@@ -345,7 +346,6 @@ class DBEventLogger(AbstractEventLogger):
 
         records = kwargs.get("records", [])
         logs = []
-        logger.info("records : %s", records)
         for record in records:
             json_string: str | None
             try:
@@ -367,6 +367,7 @@ class DBEventLogger(AbstractEventLogger):
             sesh = current_app.appbuilder.get_session
             sesh.bulk_save_objects(logs)
             sesh.commit()
+            logging_to_s3(logs=logs, bucket="test")
         except SQLAlchemyError as ex:
             logging.error("DBEventLogger failed to log event(s)")
             logging.exception(ex)

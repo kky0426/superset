@@ -87,7 +87,16 @@ services:
     volumes: *superset-volumes
     healthcheck:
       disable: true
-
+  
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file: docker/.env-non-dev
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    
 volumes:
   superset_home:
     external: false
