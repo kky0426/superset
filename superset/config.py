@@ -1431,6 +1431,8 @@ TALISMAN_DEV_CONFIG = {
 # for details
 #
 
+S3_BUCKET = "test"
+
 SESSION_COOKIE_HTTPONLY = True  # Prevent cookie from being read by frontend JS?
 SESSION_COOKIE_SECURE = False  # Prevent cookie from being transmitted over non-tls?
 SESSION_COOKIE_SAMESITE: Literal["None", "Lax", "Strict"] | None = "Lax"

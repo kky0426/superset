@@ -367,7 +367,7 @@ class DBEventLogger(AbstractEventLogger):
             sesh = current_app.appbuilder.get_session
             sesh.bulk_save_objects(logs)
             sesh.commit()
-            logging_to_s3(logs=logs, bucket="test")
+            logging_to_s3(logs=logs, bucket=current_app.config["S3_BUCKET"])
         except SQLAlchemyError as ex:
             logging.error("DBEventLogger failed to log event(s)")
             logging.exception(ex)
