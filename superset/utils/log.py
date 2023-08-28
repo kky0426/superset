@@ -361,6 +361,7 @@ class DBEventLogger(AbstractEventLogger):
                 referrer=referrer,
                 user_id=user_id,
                 request_ip=request_ip,
+                dttm=datetime.utcnow()
             )
             logs.append(log)
         try:
