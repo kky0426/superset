@@ -37,7 +37,6 @@ class PermissionModelView(default.PermissionModelView):
         log_to_statsd=True,
     )
     def edit(self, pk):
-        event_logger.log_this
         return super().edit(pk)
     
     @expose("/list/")
@@ -297,7 +296,7 @@ class AuthOAuthView(default.AuthOAuthView):
             redis = current_app.config["SESSION_REDIS"]
 
             # redis 에서 해당 username으로 된 이전 session id 찾기
-            before_sid = redis.get(user.username)
+            before_sid = redis.get(user.username) if user is not None else None
 
             ## 이전 session id가 남아있으면 세션 만료
             if before_sid is not None:
@@ -334,10 +333,13 @@ class AuthDBView(default.AuthDBView):
                 form.username.data, form.password.data
             )
             
+            if user is None:
+                return redirect(self.appbuilder.get_url_for_index)
+            
             redis = current_app.config["SESSION_REDIS"]
 
             # redis에서 해당 username으로 된 이전 session id 찾기
-            before_sid = redis.get(user.username)
+            before_sid = redis.get(user.username) if user is not None else None
 
             ## 이전 session id가 남아있으면 세션 만료
             if before_sid is not None:
