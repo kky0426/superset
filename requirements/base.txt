@@ -27,6 +27,7 @@ billiard==3.6.4.0
     # via celery
 brotli==1.0.9
     # via flask-compress
+boto3==1.26.130
 cachelib==0.4.1
     # via apache-superset
 celery==5.2.2

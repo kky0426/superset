@@ -35,7 +35,7 @@ from superset.utils.encrypt import EncryptedFieldFactory
 from superset.utils.feature_flag_manager import FeatureFlagManager
 from superset.utils.machine_auth import MachineAuthProviderFactory
 from superset.utils.profiler import SupersetProfiler
-
+from superset.utils.s3_logger import S3Handler
 
 class ResultsBackendManager:
     def __init__(self) -> None:

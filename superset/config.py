@@ -71,6 +71,8 @@ if TYPE_CHECKING:
     from superset.models.dashboard import Dashboard
     from superset.models.slice import Slice
 
+
+
 # Realtime stats logger, a StatsD implementation exists
 STATS_LOGGER = DummyStatsLogger()
 EVENT_LOGGER = DBEventLogger()

@@ -31,14 +31,18 @@ from flask import current_app, g, request
 from flask_appbuilder.const import API_URI_RIS_KEY
 from sqlalchemy.exc import SQLAlchemyError
 
-from superset.extensions import stats_logger_manager
+from superset.extensions import stats_logger_manager 
 from superset.utils.core import get_user_id, LoggerLevel
+from superset.utils.s3_logger import S3Handler
+import os
 
 if TYPE_CHECKING:
     from superset.stats_logger import BaseStatsLogger
 
 logger = logging.getLogger(__name__)
-
+s3_logger = logging.getLogger("s3_logger")
+s3_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"), capacity=int(os.environ.get("S3_LOG_BUFFER_CAPACITY"))))
+    
 
 def collect_request_payload() -> dict[str, Any]:
     """Collect log payload identifiable from request context"""
@@ -199,7 +203,7 @@ class AbstractEventLogger(ABC):
             records = json.loads(payload.get(explode_by))  # type: ignore
         except Exception:  # pylint: disable=broad-except
             records = [payload]
-        logger.info("request_ip:%s",request_ip)
+
         self.log(
             user_id,
             action,
@@ -325,6 +329,7 @@ def get_event_logger_from_cfg_value(cfg_value: Any) -> AbstractEventLogger:
     return cast(AbstractEventLogger, result)
 
 
+
 class DBEventLogger(AbstractEventLogger):
     """Event logger that commits logs to Superset DB"""
 
@@ -345,7 +350,6 @@ class DBEventLogger(AbstractEventLogger):
 
         records = kwargs.get("records", [])
         logs = []
-        logger.info("records : %s", records)
         for record in records:
             json_string: str | None
             try:
@@ -361,8 +365,10 @@ class DBEventLogger(AbstractEventLogger):
                 referrer=referrer,
                 user_id=user_id,
                 request_ip=request_ip,
+                dttm=datetime.utcnow()
             )
             logs.append(log)
+            s3_logger.info(log.to_json())
         try:
             sesh = current_app.appbuilder.get_session
             sesh.bulk_save_objects(logs)
