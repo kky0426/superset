@@ -425,16 +425,16 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         :param dashboard: The dashboard
         :returns: Whether the user can access the dashboard
         """
+        return False
+        # # pylint: disable=import-outside-toplevel
+        # from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
 
-        # pylint: disable=import-outside-toplevel
-        from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
+        # try:
+        #     self.raise_for_dashboard_access(dashboard)
+        # except DashboardAccessDeniedError:
+        #     return False
 
-        try:
-            self.raise_for_dashboard_access(dashboard)
-        except DashboardAccessDeniedError:
-            return False
-
-        return True
+        # return True
 
     @staticmethod
     def get_datasource_access_error_msg(datasource: "BaseDatasource") -> str:
@@ -2018,7 +2018,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         # pylint: disable=import-outside-toplevel
         from superset import is_feature_enabled
         from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
-
+ 
         if self.is_guest_user() and dashboard.embedded:
             if self.has_guest_access(dashboard):
                 return
