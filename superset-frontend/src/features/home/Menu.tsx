@@ -324,6 +324,9 @@ export default function MenuWrapper({ data, ...rest }: MenuProps) {
       return;
     }
 
+    if (['Dashboards', 'Charts'].includes(item.name)) {
+      return;
+    }
     const children: (MenuObjectProps | string)[] = [];
     const newItem = {
       ...item,
