@@ -2018,31 +2018,33 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         # pylint: disable=import-outside-toplevel
         from superset import is_feature_enabled
         from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
- 
-        if self.is_guest_user() and dashboard.embedded:
-            if self.has_guest_access(dashboard):
-                return
-        else:
-            if self.is_admin() or self.is_owner(dashboard):
-                return
-
-            # RBAC and legacy (datasource inferred) access controls.
-            if is_feature_enabled("DASHBOARD_RBAC") and dashboard.roles:
-                if dashboard.published and {role.id for role in dashboard.roles} & {
-                    role.id for role in self.get_user_roles()
-                }:
-                    return
-            elif (
-                not dashboard.published
-                or not dashboard.datasources
-                or any(
-                    self.can_access_datasource(datasource)
-                    for datasource in dashboard.datasources
-                )
-            ):
-                return
 
         raise DashboardAccessDeniedError()
+
+        # if self.is_guest_user() and dashboard.embedded:
+        #     if self.has_guest_access(dashboard):
+        #         return
+        # else:
+        #     if self.is_admin() or self.is_owner(dashboard):
+        #         return
+
+        #     # RBAC and legacy (datasource inferred) access controls.
+        #     if is_feature_enabled("DASHBOARD_RBAC") and dashboard.roles:
+        #         if dashboard.published and {role.id for role in dashboard.roles} & {
+        #             role.id for role in self.get_user_roles()
+        #         }:
+        #             return
+        #     elif (
+        #         not dashboard.published
+        #         or not dashboard.datasources
+        #         or any(
+        #             self.can_access_datasource(datasource)
+        #             for datasource in dashboard.datasources
+        #         )
+        #     ):
+        #         return
+
+        # raise DashboardAccessDeniedError()
 
     @staticmethod
     def can_access_based_on_dashboard(datasource: "BaseDatasource") -> bool:
