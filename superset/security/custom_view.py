@@ -308,6 +308,10 @@ class AuthOAuthView(default.AuthOAuthView):
             
             # login 후 redis에 session id 저장 
             redis.set(user.username, session.sid)
+
+            if before_sid is not None and before_sid != session.sid:
+                flash("새로운 세션에서 로그인 하셨습니다. 이미 접속중인 세션을 해제합니다.")
+                
             next_url = self.appbuilder.get_url_for_index
             # Check if there is a next url on state
             if "next" in state and len(state["next"]) > 0:
@@ -350,8 +354,12 @@ class AuthDBView(default.AuthDBView):
             
             # login 후 redis에 session id 저장 
             redis.set(user.username, session.sid)
+            logger.info("before:%s",before_sid)
             logger.info("current:%s",session.sid)
-            return redirect(next_url)
+
+            if before_sid is not None and before_sid != session.sid:
+                flash("새로운 세션에서 로그인 하셨습니다. 이미 접속중인 세션을 해제합니다.")
+            return redirect(self.appbuilder.get_url_for_index)
         return self.render_template(
             self.login_template, title=self.title, form=form, appbuilder=self.appbuilder
         )
