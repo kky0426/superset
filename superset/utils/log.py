@@ -55,7 +55,7 @@ def collect_request_payload() -> dict[str, Any]:
         # url search params can overwrite POST body
         **request.args.to_dict(),
     }
-
+    logger.info(payload)
     # role 생성/수정 시 포함된 모든 permission payload에 저장
     if "permissions" in payload:
         payload["permissions"] = request.form.getlist("permissions")
@@ -193,7 +193,8 @@ class AbstractEventLogger(ABC):
             slice_id = int(slice_id)  # type: ignore
         except (TypeError, ValueError):
             slice_id = 0
-
+        
+        logger.info(action)
         if log_to_statsd:
             stats_logger_manager.instance.incr(action)
 
