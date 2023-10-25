@@ -28,9 +28,12 @@ from superset.queries.filters import QueryFilter
 from superset.queries.saved_queries.filters import SavedQueryFilter
 from superset.utils.core import get_user_id
 from superset.utils.dates import now_as_float
+import os
+from superset.utils.s3_logger import S3Handler
 
 logger = logging.getLogger(__name__)
-
+query_logger = logging.getLogger("query_logger")
+query_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"),key="query", capacity=1))
 
 class QueryDAO(BaseDAO[Query]):
     base_filter = QueryFilter
@@ -63,7 +66,11 @@ class QueryDAO(BaseDAO[Query]):
             if "name" in col:
                 col["column_name"] = col.get("name")
         db.session.add(query)
+        logger.info(f"query : {query.to_json()}")
         query.set_extra_json_key("columns", columns)
+        query_log = {"userId": query.user_id, "username": query.username, "database": query.database_name, "schema": query.schema,
+                     "sql": query.sql, "startDttm": str(query.start_time), "endDttm": str(query.end_time), "status": query.status, "error": query.error_message}
+        query_logger.info(query_log)
 
     @staticmethod
     def get_queries_changed_after(last_updated_ms: Union[float, int]) -> list[Query]:

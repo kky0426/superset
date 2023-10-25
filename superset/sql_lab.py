@@ -71,6 +71,8 @@ SQL_QUERY_MUTATOR = config["SQL_QUERY_MUTATOR"]
 log_query = config["QUERY_LOGGER"]
 logger = logging.getLogger(__name__)
 
+query_logger = logging.getLogger("query_logger")
+
 
 class SqlLabException(Exception):
     pass
@@ -119,6 +121,9 @@ def handle_query_error(
     payload.update({"status": query.status, "error": msg, "errors": errors_payload})
     if troubleshooting_link := config["TROUBLESHOOTING_LINK"]:
         payload["link"] = troubleshooting_link
+    query_log = {"userId": query.user_id, "username": query.username, "database": query.database_name, "schema": query.schema,
+            "sql": query.sql, "startDttm": str(query.start_time), "endDttm": str(query.end_time), "status": query.status, "error": query.error_message}
+    query_logger.info(query_log)
     return payload
 
 

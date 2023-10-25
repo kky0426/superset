@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     from superset.stats_logger import BaseStatsLogger
 
 logger = logging.getLogger(__name__)
-s3_logger = logging.getLogger("s3_logger")
-s3_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"), capacity=int(os.environ.get("S3_LOG_BUFFER_CAPACITY"))))
+action_logger = logging.getLogger("action_logger")
+action_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"), key="action", capacity=int(os.environ.get("S3_LOG_BUFFER_CAPACITY"))))
     
 
 def collect_request_payload() -> dict[str, Any]:
@@ -369,7 +369,7 @@ class DBEventLogger(AbstractEventLogger):
                 dttm=datetime.utcnow()
             )
             logs.append(log)
-            s3_logger.info(log.to_json())
+            action_logger.info(log.to_json())
         try:
             sesh = current_app.appbuilder.get_session
             sesh.bulk_save_objects(logs)
