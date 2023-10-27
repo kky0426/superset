@@ -341,6 +341,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         :param view_name: The FAB view-menu name
         :returns: Whether the user can access the FAB permission/view
         """
+        if view_name in ["Chart", "Dashboard"]:
+            return False
 
         user = g.user
         if user.is_anonymous:
