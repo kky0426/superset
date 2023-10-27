@@ -46,7 +46,6 @@ class PermissionModelView(default.PermissionModelView):
         log_to_statsd=True,
     )
     def list(self):
-        event_logger.log_this
         return super().list()
     
     @expose("/add", methods=["GET", "POST"])
@@ -138,7 +137,6 @@ class RoleModelView(default.RoleModelView):
         log_to_statsd=True,
     )
     def add(self):
-        event_logger.log_context("add role")
         return super().add()
     
     @expose("/delete/<pk>", methods=["GET", "POST"])
@@ -207,7 +205,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def list(self):
-        event_logger.log_this
         return super().list()
     
     @expose("/add", methods=["GET", "POST"])
@@ -217,7 +214,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def add(self):
-        event_logger.log_this
         return super().add()
         
     @expose("/delete/<pk>", methods=["GET", "POST"])
@@ -227,7 +223,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def delete(self, pk):
-        event_logger.log_this
         return super().delete(pk)
     
 class UserDBModelView(UserModelView):

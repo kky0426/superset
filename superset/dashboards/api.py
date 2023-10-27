@@ -304,7 +304,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @safe
     @statsd_metrics
     @with_dashboard
-    @event_logger.log_this_with_extra_payload
+    # @event_logger.log_this_with_extra_payload
     # pylint: disable=arguments-differ
     def get(
         self,
@@ -364,6 +364,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get_datasets",
         log_to_statsd=False,
+        disabled=True,
     )
     def get_datasets(self, id_or_slug: str) -> Response:
         """Gets a dashboard's datasets
@@ -433,6 +434,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get_charts",
         log_to_statsd=False,
+        disabled=True,
     )
     def get_charts(self, id_or_slug: str) -> Response:
         """Gets the chart definitions for a given dashboard
@@ -490,6 +492,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.post",
         log_to_statsd=False,
+        disabled=True
     )
     @requires_json
     def post(self) -> Response:
@@ -552,6 +555,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.put",
         log_to_statsd=False,
+        disabled=True,
     )
     @requires_json
     def put(self, pk: int) -> Response:
@@ -638,6 +642,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.delete",
         log_to_statsd=False,
+        disabled=True
     )
     def delete(self, pk: int) -> Response:
         """Deletes a Dashboard
@@ -695,6 +700,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.bulk_delete",
         log_to_statsd=False,
+        disabled=True
     )
     def bulk_delete(self, **kwargs: Any) -> Response:
         """Delete bulk Dashboards
@@ -756,6 +762,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.export",
         log_to_statsd=False,
+        disabled=True,
     )  # pylint: disable=too-many-locals
     def export(self, **kwargs: Any) -> Response:
         """Export dashboards
@@ -841,6 +848,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.thumbnail",
         log_to_statsd=False,
+        disabled=True,
     )
     def thumbnail(self, pk: int, digest: str, **kwargs: Any) -> WerkzeugResponse:
         """Get Dashboard thumbnail
@@ -945,6 +953,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".favorite_status",
         log_to_statsd=False,
+        disabled=True,
     )
     def favorite_status(self, **kwargs: Any) -> Response:
         """Favorite Stars for Dashboards
@@ -995,6 +1004,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".add_favorite",
         log_to_statsd=False,
+        disabled=True,
     )
     def add_favorite(self, pk: int) -> Response:
         """Marks the dashboard as favorite
@@ -1039,6 +1049,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".remove_favorite",
         log_to_statsd=False,
+        disabled=True,
     )
     def remove_favorite(self, pk: int) -> Response:
         """Remove the dashboard from the user favorite list
@@ -1081,6 +1092,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.import_",
         log_to_statsd=False,
+        disabled=True,
     )
     @requires_form_data
     def import_(self) -> Response:
@@ -1207,6 +1219,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get_embedded",
         log_to_statsd=False,
+        disabled=True,
     )
     @with_dashboard
     def get_embedded(self, dashboard: Dashboard) -> Response:
@@ -1250,6 +1263,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.set_embedded",
         log_to_statsd=False,
+        disabled=True,
     )
     @with_dashboard
     def set_embedded(self, dashboard: Dashboard) -> Response:
@@ -1331,6 +1345,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.delete_embedded",
         log_to_statsd=False,
+        disabled=True,
     )
     @with_dashboard
     def delete_embedded(self, dashboard: Dashboard) -> Response:
@@ -1373,6 +1388,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.copy_dash",
         log_to_statsd=False,
+        disabled=True,
     )
     @with_dashboard
     def copy_dash(self, original_dash: Dashboard) -> Response:
@@ -1430,3 +1446,12 @@ class DashboardRestApi(BaseSupersetModelRestApi):
                 ).timestamp(),
             },
         )
+
+    def get_list_headless(self, **kwargs: Any) -> Response:
+        return super().get_list_headless_origin(**kwargs)
+
+    def get_headless(self, pk: int, **kwargs: Any) -> Response:
+        return super().get_headless_origin(pk, **kwargs)
+    
+    def info_headless(self, **kwargs: Any) -> Response:
+        return super().info_headless_origin(**kwargs)
