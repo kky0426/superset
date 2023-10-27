@@ -341,6 +341,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         :param view_name: The FAB view-menu name
         :returns: Whether the user can access the FAB permission/view
         """
+        if view_name in ["Chart", "Dashboard"]:
+            return False
 
         user = g.user
         if user.is_anonymous:
@@ -425,16 +427,16 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         :param dashboard: The dashboard
         :returns: Whether the user can access the dashboard
         """
+        return False
+        # # pylint: disable=import-outside-toplevel
+        # from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
 
-        # pylint: disable=import-outside-toplevel
-        from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
+        # try:
+        #     self.raise_for_dashboard_access(dashboard)
+        # except DashboardAccessDeniedError:
+        #     return False
 
-        try:
-            self.raise_for_dashboard_access(dashboard)
-        except DashboardAccessDeniedError:
-            return False
-
-        return True
+        # return True
 
     @staticmethod
     def get_datasource_access_error_msg(datasource: "BaseDatasource") -> str:
@@ -2019,30 +2021,32 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         from superset import is_feature_enabled
         from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
 
-        if self.is_guest_user() and dashboard.embedded:
-            if self.has_guest_access(dashboard):
-                return
-        else:
-            if self.is_admin() or self.is_owner(dashboard):
-                return
-
-            # RBAC and legacy (datasource inferred) access controls.
-            if is_feature_enabled("DASHBOARD_RBAC") and dashboard.roles:
-                if dashboard.published and {role.id for role in dashboard.roles} & {
-                    role.id for role in self.get_user_roles()
-                }:
-                    return
-            elif (
-                not dashboard.published
-                or not dashboard.datasources
-                or any(
-                    self.can_access_datasource(datasource)
-                    for datasource in dashboard.datasources
-                )
-            ):
-                return
-
         raise DashboardAccessDeniedError()
+
+        # if self.is_guest_user() and dashboard.embedded:
+        #     if self.has_guest_access(dashboard):
+        #         return
+        # else:
+        #     if self.is_admin() or self.is_owner(dashboard):
+        #         return
+
+        #     # RBAC and legacy (datasource inferred) access controls.
+        #     if is_feature_enabled("DASHBOARD_RBAC") and dashboard.roles:
+        #         if dashboard.published and {role.id for role in dashboard.roles} & {
+        #             role.id for role in self.get_user_roles()
+        #         }:
+        #             return
+        #     elif (
+        #         not dashboard.published
+        #         or not dashboard.datasources
+        #         or any(
+        #             self.can_access_datasource(datasource)
+        #             for datasource in dashboard.datasources
+        #         )
+        #     ):
+        #         return
+
+        # raise DashboardAccessDeniedError()
 
     @staticmethod
     def can_access_based_on_dashboard(datasource: "BaseDatasource") -> bool:

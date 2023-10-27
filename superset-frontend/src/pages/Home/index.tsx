@@ -52,10 +52,10 @@ import { TableTab } from 'src/views/CRUD/types';
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
 import { canUserAccessSqlLab } from 'src/dashboard/util/permissionUtils';
 import { WelcomePageLastTab } from 'src/features/home/types';
-import ActivityTable from 'src/features/home/ActivityTable';
-import ChartTable from 'src/features/home/ChartTable';
+// import ActivityTable from 'src/features/home/ActivityTable';
+// import ChartTable from 'src/features/home/ChartTable';
 import SavedQueries from 'src/features/home/SavedQueries';
-import DashboardTable from 'src/features/home/DashboardTable';
+// import DashboardTable from 'src/features/home/DashboardTable';
 
 const extensionsRegistry = getExtensionsRegistry();
 
@@ -161,7 +161,7 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
   const id = userid!.toString(); // confident that user is not a guest user
   const params = rison.encode({ page_size: 6 });
   const recent = `/api/v1/log/recent_activity/?q=${params}`;
-  const [activeChild, setActiveChild] = useState('Loading');
+  const [_activeChild, setActiveChild] = useState('Loading');
   const userKey = dangerouslyGetItemDoNotUse(id, null);
   let defaultChecked = false;
   const isThumbnailsEnabled = isFeatureEnabled(FeatureFlag.THUMBNAILS);
@@ -176,7 +176,7 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
   const [dashboardData, setDashboardData] = useState<Array<object> | null>(
     null,
   );
-  const [isFetchingActivityData, setIsFetchingActivityData] = useState(true);
+  const [_isFetchingActivityData, setIsFetchingActivityData] = useState(true);
 
   const collapseState = getItem(LocalStorageKeys.homepage_collapse_state, []);
   const [activeState, setActiveState] = useState<Array<string>>(collapseState);
@@ -192,7 +192,7 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
     'welcome.main.replacement',
   );
 
-  const [otherTabTitle, otherTabFilters] = useMemo(() => {
+  const [_otherTabTitle, otherTabFilters] = useMemo(() => {
     const lastTab = bootstrapData.common?.conf
       .WELCOME_PAGE_LAST_TAB as WelcomePageLastTab;
     const [customTitle, customFilter] = Array.isArray(lastTab)
@@ -325,8 +325,8 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
     }
   }, [activityData]);
 
-  const isRecentActivityLoading =
-    !activityData?.[TableTab.Other] && !activityData?.[TableTab.Viewed];
+  // const isRecentActivityLoading =
+  //   !activityData?.[TableTab.Other] && !activityData?.[TableTab.Viewed];
 
   const menuData: SubMenuProps = {
     activeChild: 'Home',
@@ -365,7 +365,7 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
               ghost
               bigger
             >
-              <Collapse.Panel header={t('Recents')} key="1">
+              {/* <Collapse.Panel header={t('Recents')} key="1">
                 {activityData &&
                 (activityData[TableTab.Viewed] ||
                   activityData[TableTab.Other] ||
@@ -409,7 +409,7 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
                     otherTabTitle={otherTabTitle}
                   />
                 )}
-              </Collapse.Panel>
+              </Collapse.Panel> */}
               {canAccessSqlLab && (
                 <Collapse.Panel header={t('Saved queries')} key="4">
                   {!queryData ? (

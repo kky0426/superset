@@ -46,7 +46,6 @@ class PermissionModelView(default.PermissionModelView):
         log_to_statsd=True,
     )
     def list(self):
-        event_logger.log_this
         return super().list()
     
     @expose("/add", methods=["GET", "POST"])
@@ -138,7 +137,6 @@ class RoleModelView(default.RoleModelView):
         log_to_statsd=True,
     )
     def add(self):
-        event_logger.log_context("add role")
         return super().add()
     
     @expose("/delete/<pk>", methods=["GET", "POST"])
@@ -207,7 +205,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def list(self):
-        event_logger.log_this
         return super().list()
     
     @expose("/add", methods=["GET", "POST"])
@@ -217,7 +214,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def add(self):
-        event_logger.log_this
         return super().add()
         
     @expose("/delete/<pk>", methods=["GET", "POST"])
@@ -227,7 +223,6 @@ class UserModelView(default.UserModelView):
         log_to_statsd=True,
     )
     def delete(self, pk):
-        event_logger.log_this
         return super().delete(pk)
     
 class UserDBModelView(UserModelView):
@@ -308,6 +303,10 @@ class AuthOAuthView(default.AuthOAuthView):
             
             # login 후 redis에 session id 저장 
             redis.set(user.username, session.sid)
+
+            if before_sid is not None and before_sid.decode("utf-8") != session.sid:
+                flash("새로운 세션에서 로그인 하셨습니다. 이미 접속중인 세션을 해제합니다.")
+                
             next_url = self.appbuilder.get_url_for_index
             # Check if there is a next url on state
             if "next" in state and len(state["next"]) > 0:
@@ -350,8 +349,10 @@ class AuthDBView(default.AuthDBView):
             
             # login 후 redis에 session id 저장 
             redis.set(user.username, session.sid)
-            logger.info("current:%s",session.sid)
-            return redirect(next_url)
+
+            if before_sid is not None and before_sid.decode("utf-8") != session.sid:
+                flash("새로운 세션에서 로그인 하셨습니다. 이미 접속중인 세션을 해제합니다.")
+            return redirect(self.appbuilder.get_url_for_index)
         return self.render_template(
             self.login_template, title=self.title, form=form, appbuilder=self.appbuilder
         )

@@ -460,6 +460,10 @@ class BaseSupersetModelRestApi(ModelRestApi, BaseSupersetApiMixin):
         self.send_stats_metrics(response, self.info.__name__, duration)
         return response
 
+    @handle_api_exception
+    def info_headless_origin(self, **kwargs: Any) -> Response:
+        return super().info_headless(**kwargs)
+    
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get",
         object_ref=False,
@@ -474,6 +478,10 @@ class BaseSupersetModelRestApi(ModelRestApi, BaseSupersetApiMixin):
         self.send_stats_metrics(response, self.get.__name__, duration)
         return response
 
+    @handle_api_exception
+    def get_headless_origin(self, pk: int, **kwargs: Any) -> Response:
+        return super().get_headless(pk, **kwargs)
+    
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get_list",
         object_ref=False,
@@ -487,7 +495,11 @@ class BaseSupersetModelRestApi(ModelRestApi, BaseSupersetApiMixin):
         duration, response = time_function(super().get_list_headless, **kwargs)
         self.send_stats_metrics(response, self.get_list.__name__, duration)
         return response
-
+    
+    @handle_api_exception
+    def get_list_headless_origin(self, **kwargs: Any) -> Response:
+        return super().get_list_headless(**kwargs)
+    
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.post",
         object_ref=False,

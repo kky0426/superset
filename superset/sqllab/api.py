@@ -60,10 +60,11 @@ from superset.utils import core as utils
 from superset.views.base import CsvResponse, generate_download_headers, json_success
 from superset.views.base_api import BaseSupersetApi, requires_json, statsd_metrics
 from superset.sqllab.utils import masking_in_dicionary_value
+from superset.utils.s3_logger import S3Handler
+import os
 
 config = app.config
 logger = logging.getLogger(__name__)
-
 
 class SqlLabRestApi(BaseSupersetApi):
     datamodel = SQLAInterface(Query)
@@ -308,6 +309,7 @@ class SqlLabRestApi(BaseSupersetApi):
                 "user_agent": cast(Optional[str], request.headers.get("USER_AGENT"))
             }
             execution_context = SqlJsonExecutionContext(request.json)
+            logger.info(execution_context.__dict__)
             command = self._create_sql_json_command(execution_context, log_params)
             command_result: CommandResult = command.run()
 
@@ -316,7 +318,6 @@ class SqlLabRestApi(BaseSupersetApi):
                 if command_result["status"] == SqlJsonExecutionStatus.QUERY_IS_RUNNING
                 else 200
             )
-            logger.info("api/execute:%s",command_result)
             # return the execution result without special encoding
             return json_success(command_result["payload"], response_status)
         except SqlLabException as ex:

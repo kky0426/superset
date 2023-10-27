@@ -6,7 +6,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-def save(logs, bucket):
+def save(logs, bucket, key):
     logger.info("start upload s3")
     
     s3_client = get_local_client() if os.environ.get("S3_ENV") == "local" else get_client()
@@ -15,8 +15,8 @@ def save(logs, bucket):
     upload_log = "\n".join(upload_log).encode("utf-8")
 
     current = datetime.now(timezone(timedelta(hours=9)))
-    key = f"{current.strftime('%Y-%m-%d')}/{current.strftime('%X')}-{uuid.uuid4()}"
-    s3_client.put_object(Bucket=bucket, Body=upload_log, Key=key)
+    _key = f"{key}/{current.strftime('%Y-%m-%d')}/{current.strftime('%X')}-{uuid.uuid4()}"
+    s3_client.put_object(Bucket=bucket, Body=upload_log, Key=_key)
 
 
 def get_local_client():
@@ -24,7 +24,7 @@ def get_local_client():
                              endpoint_url = "http://minio:9000",
                              aws_access_key_id = "minioadmin",
                              aws_secret_access_key = "minioadmin",
-                             region_name="us-east-1"
+                             region_name="us-east-1",
                              )
 
 

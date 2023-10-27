@@ -2,10 +2,11 @@ import logging
 import superset.utils.s3_service as s3
 
 class S3Handler(logging.Handler):
-    def __init__(self, level=0, bucket="test", capacity=10) -> None:
+    def __init__(self, level=0, bucket="test", key="", capacity=10) -> None:
         super().__init__(level)
         self.bucket = bucket
         self.capacity = capacity
+        self.key = key
         self.buffer = []
 
 
@@ -18,7 +19,8 @@ class S3Handler(logging.Handler):
     
 
     def flush(self) -> None:
-        s3.save(logs=self.buffer, bucket=self.bucket)
-        self.buffer = []
+        if self.buffer:
+            s3.save(logs=self.buffer, bucket=self.bucket, key=self.key)
+            self.buffer = []
 
     

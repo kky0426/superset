@@ -22,7 +22,7 @@ from io import BytesIO
 from typing import Any, cast, Optional
 from zipfile import is_zipfile, ZipFile
 
-from flask import redirect, request, Response, send_file, url_for
+from flask import redirect, request, Response, send_file, url_for, make_response
 from flask_appbuilder.api import expose, protect, rison, safe
 from flask_appbuilder.hooks import before_request
 from flask_appbuilder.models.sqla.interface import SQLAInterface
@@ -91,7 +91,11 @@ from superset.views.base_api import (
     statsd_metrics,
 )
 from superset.views.filters import BaseFilterRelatedUsers, FilterRelatedOwners
+from superset.views.base import handle_api_exception
 
+from superset.charts.commands.exceptions import (
+    ChartAccessDeniedError,
+)
 logger = logging.getLogger(__name__)
 config = app.config
 
@@ -282,6 +286,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.post",
         log_to_statsd=False,
+        disabled = True,
     )
     @requires_json
     def post(self) -> Response:
@@ -348,6 +353,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.put",
         log_to_statsd=False,
+        disabled = True,
     )
     @requires_json
     def put(self, pk: int) -> Response:
@@ -425,6 +431,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.delete",
         log_to_statsd=False,
+        disabled = True,
     )
     def delete(self, pk: int) -> Response:
         """Deletes a Chart
@@ -482,6 +489,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.bulk_delete",
         log_to_statsd=False,
+        disabled = True,
     )
     def bulk_delete(self, **kwargs: Any) -> Response:
         """Delete bulk Charts
@@ -542,6 +550,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".cache_screenshot",
         log_to_statsd=False,
+        disabled = True,
     )
     def cache_screenshot(self, pk: int, **kwargs: Any) -> WerkzeugResponse:
         """
@@ -614,6 +623,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.screenshot",
         log_to_statsd=False,
+        disabled = True,
     )
     def screenshot(self, pk: int, digest: str) -> WerkzeugResponse:
         """Get Chart screenshot
@@ -668,6 +678,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.thumbnail",
         log_to_statsd=False,
+        disabled = True,
     )
     def thumbnail(self, pk: int, digest: str, **kwargs: Any) -> WerkzeugResponse:
         """Get Chart thumbnail
@@ -755,6 +766,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.export",
         log_to_statsd=False,
+        disabled = True,
     )
     def export(self, **kwargs: Any) -> Response:
         """Export charts
@@ -820,6 +832,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".favorite_status",
         log_to_statsd=False,
+        disabled = True,
     )
     def favorite_status(self, **kwargs: Any) -> Response:
         """Favorite stars for Charts
@@ -869,6 +882,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".add_favorite",
         log_to_statsd=False,
+        disabled = True,
     )
     def add_favorite(self, pk: int) -> Response:
         """Marks the chart as favorite
@@ -909,11 +923,11 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @protect()
     @safe
     @statsd_metrics
-    @event_logger.log_this_with_context(
-        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
-        f".remove_favorite",
-        log_to_statsd=False,
-    )
+    # @event_logger.log_this_with_context(
+    #     action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
+    #     f".remove_favorite",
+    #     log_to_statsd=False,
+    # )
     def remove_favorite(self, pk: int) -> Response:
         """Remove the chart from the user favorite list
         ---
@@ -957,6 +971,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
         f".warm_up_cache",
         log_to_statsd=False,
+        disabled=True,
     )
     def warm_up_cache(self) -> Response:
         """
@@ -1012,6 +1027,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.import_",
         log_to_statsd=False,
+        disabled=True,
     )
     @requires_form_data
     def import_(self) -> Response:
@@ -1126,3 +1142,13 @@ class ChartRestApi(BaseSupersetModelRestApi):
         )
         command.run()
         return self.response(200, message="OK")
+
+
+    def get_list_headless(self, **kwargs: Any) -> Response:
+        return super().get_list_headless_origin(**kwargs)
+
+    def get_headless(self, pk: int, **kwargs: Any) -> Response:
+        return super().get_headless_origin(pk, **kwargs)
+    
+    def info_headless(self, **kwargs: Any) -> Response:
+        return super().info_headless_origin(**kwargs)

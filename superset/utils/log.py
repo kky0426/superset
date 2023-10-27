@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     from superset.stats_logger import BaseStatsLogger
 
 logger = logging.getLogger(__name__)
-s3_logger = logging.getLogger("s3_logger")
-s3_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"), capacity=int(os.environ.get("S3_LOG_BUFFER_CAPACITY"))))
+action_logger = logging.getLogger("action_logger")
+action_logger.addHandler(S3Handler(bucket=os.environ.get("S3_BUCKET"), key="action", capacity=int(os.environ.get("S3_LOG_BUFFER_CAPACITY"))))
     
 
 def collect_request_payload() -> dict[str, Any]:
@@ -55,7 +55,7 @@ def collect_request_payload() -> dict[str, Any]:
         # url search params can overwrite POST body
         **request.args.to_dict(),
     }
-
+    logger.info(payload)
     # role 생성/수정 시 포함된 모든 permission payload에 저장
     if "permissions" in payload:
         payload["permissions"] = request.form.getlist("permissions")
@@ -145,9 +145,12 @@ class AbstractEventLogger(ABC):
         duration: timedelta | None = None,
         object_ref: str | None = None,
         log_to_statsd: bool = True,
+        disabled: bool | None = False,
         **payload_override: dict[str, Any] | None,
     ) -> None:
         # pylint: disable=import-outside-toplevel
+        if disabled:
+            return
         from superset.views.core import get_form_data
 
         referrer = request.referrer[:1000] if request and request.referrer else None
@@ -193,7 +196,7 @@ class AbstractEventLogger(ABC):
             slice_id = int(slice_id)  # type: ignore
         except (TypeError, ValueError):
             slice_id = 0
-
+        
         if log_to_statsd:
             stats_logger_manager.instance.incr(action)
 
@@ -221,6 +224,7 @@ class AbstractEventLogger(ABC):
         action: str,
         object_ref: str | None = None,
         log_to_statsd: bool = True,
+        disabled: bool | None = False,
     ) -> Iterator[Callable[..., None]]:
         """
         Log an event with additional information from the request context.
@@ -237,7 +241,7 @@ class AbstractEventLogger(ABC):
         # take the action from payload_override else take the function param action
         action_str = payload_override.pop("action", action)
         self.log_with_context(
-            action_str, duration, object_ref, log_to_statsd, **payload_override
+            action_str, duration, object_ref, log_to_statsd, disabled, **payload_override
         )
 
     def _wrapper(
@@ -246,6 +250,7 @@ class AbstractEventLogger(ABC):
         action: str | Callable[..., str] | None = None,
         object_ref: str | Callable[..., str] | Literal[False] | None = None,
         allow_extra_payload: bool | None = False,
+        disable: bool | None = False,
         **wrapper_kwargs: Any,
     ) -> Callable[..., Any]:
         @functools.wraps(f)
@@ -266,7 +271,8 @@ class AbstractEventLogger(ABC):
                 else:
                     value = f(*args, **kwargs)
             return value
-
+        if disable:
+            return f
         return wrapper
 
     def log_this(self, f: Callable[..., Any]) -> Callable[..., Any]:
@@ -275,10 +281,8 @@ class AbstractEventLogger(ABC):
 
     def log_this_with_context(self, **kwargs: Any) -> Callable[..., Any]:
         """Decorator that can override kwargs of log_context"""
-
         def func(f: Callable[..., Any]) -> Callable[..., Any]:
             return self._wrapper(f, **kwargs)
-
         return func
 
     def log_this_with_extra_payload(self, f: Callable[..., Any]) -> Callable[..., Any]:
@@ -286,6 +290,7 @@ class AbstractEventLogger(ABC):
         return self._wrapper(f, allow_extra_payload=True)
 
 
+    
 def get_event_logger_from_cfg_value(cfg_value: Any) -> AbstractEventLogger:
     """
     This function implements the deprecation of assignment
@@ -368,7 +373,7 @@ class DBEventLogger(AbstractEventLogger):
                 dttm=datetime.utcnow()
             )
             logs.append(log)
-            s3_logger.info(log.to_json())
+            action_logger.info(log.to_json())
         try:
             sesh = current_app.appbuilder.get_session
             sesh.bulk_save_objects(logs)

@@ -20,8 +20,20 @@
 <!DOCTYPE html>
 {% import 'appbuilder/general/lib.html' as lib %}
 {% from 'superset/partials/asset_bundle.html' import css_bundle, js_bundle with context %}
+{% import "superset/macros.html" as macros %}
 
 {% set favicons = appbuilder.app.config['FAVICONS'] %}
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <script async nonce="{{ macros.get_nonce() }}">
+      {% for message in messages %}
+        alert("{{ message }}");
+      {% endfor %}
+    </script>
+  {% endif %}
+{% endwith %}
+
 <html>
   <head>
     <title>

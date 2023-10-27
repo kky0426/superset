@@ -18,8 +18,8 @@
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { css, FeatureFlag, styled, t, useTheme } from '@superset-ui/core';
-import Icons from 'src/components/Icons';
+import { css, styled, t, useTheme } from '@superset-ui/core';
+// import Icons from 'src/components/Icons';
 import { Menu } from 'src/components/Menu';
 import ModalTrigger from 'src/components/ModalTrigger';
 import Button from 'src/components/Button';
@@ -29,10 +29,10 @@ import downloadAsImage from 'src/utils/downloadAsImage';
 import { getChartPermalink } from 'src/utils/urlUtils';
 import copyTextToClipboard from 'src/utils/copy';
 import HeaderReportDropDown from 'src/components/ReportModal/HeaderReportDropdown';
-import { isFeatureEnabled } from 'src/featureFlags';
+// import { isFeatureEnabled } from 'src/featureFlags';
 import ViewQueryModal from '../controls/ViewQueryModal';
-import EmbedCodeContent from '../EmbedCodeContent';
-import DashboardsSubMenu from './DashboardsSubMenu';
+// import EmbedCodeContent from '../EmbedCodeContent';
+// import DashboardsSubMenu from './DashboardsSubMenu';
 
 const MENU_KEYS = {
   EDIT_PROPERTIES: 'edit_properties',
@@ -56,7 +56,7 @@ const MENU_KEYS = {
   RUN_IN_SQL_LAB: 'run_in_sql_lab',
 };
 
-const VIZ_TYPES_PIVOTABLE = ['pivot_table_v2'];
+// const VIZ_TYPES_PIVOTABLE = ['pivot_table_v2'];
 
 export const MenuItemWithCheckboxContainer = styled.div`
   ${({ theme }) => css`
@@ -93,12 +93,12 @@ export const MenuTrigger = styled(Button)`
   `}
 `;
 
-const iconReset = css`
-  .ant-dropdown-menu-item > & > .anticon:first-child {
-    margin-right: 0;
-    vertical-align: 0;
-  }
-`;
+// const iconReset = css`
+//   .ant-dropdown-menu-item > & > .anticon:first-child {
+//     margin-right: 0;
+//     vertical-align: 0;
+//   }
+// `;
 
 export const useExploreAdditionalActionsMenu = (
   latestQueryFormData,
@@ -278,7 +278,7 @@ export const useExploreAdditionalActionsMenu = (
               {t('Edit chart properties')}
             </Menu.Item>
           )}
-          <Menu.SubMenu
+          {/* <Menu.SubMenu
             title={t('Dashboards added to')}
             key={MENU_KEYS.DASHBOARDS_ADDED_TO}
           >
@@ -286,10 +286,10 @@ export const useExploreAdditionalActionsMenu = (
               chartId={slice?.slice_id}
               dashboards={dashboards}
             />
-          </Menu.SubMenu>
+          </Menu.SubMenu> */}
           <Menu.Divider />
         </>
-        <Menu.SubMenu title={t('Download')} key={MENU_KEYS.DOWNLOAD_SUBMENU}>
+        {/* <Menu.SubMenu title={t('Download')} key={MENU_KEYS.DOWNLOAD_SUBMENU}>
           {VIZ_TYPES_PIVOTABLE.includes(latestQueryFormData.viz_type) ? (
             <>
               <Menu.Item
@@ -334,8 +334,8 @@ export const useExploreAdditionalActionsMenu = (
           >
             {t('Export to Excel')}
           </Menu.Item>
-        </Menu.SubMenu>
-        <Menu.SubMenu title={t('Share')} key={MENU_KEYS.SHARE_SUBMENU}>
+        </Menu.SubMenu> */}
+        {/* <Menu.SubMenu title={t('Share')} key={MENU_KEYS.SHARE_SUBMENU}>
           <Menu.Item key={MENU_KEYS.COPY_PERMALINK}>
             {t('Copy permalink to clipboard')}
           </Menu.Item>
@@ -361,7 +361,7 @@ export const useExploreAdditionalActionsMenu = (
               />
             </Menu.Item>
           ) : null}
-        </Menu.SubMenu>
+        </Menu.SubMenu> */}
         <Menu.Divider />
         {showReportSubMenu ? (
           <>
