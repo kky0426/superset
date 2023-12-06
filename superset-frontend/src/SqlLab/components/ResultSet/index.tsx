@@ -237,6 +237,7 @@ const ResultSet = ({
         templateParams: query?.templateParams,
         schema: query?.schema,
       };
+      return null;
 
       return (
         <ResultSetControls>
@@ -268,7 +269,7 @@ const ResultSet = ({
               wrapped={false}
               copyNode={
                 <Button buttonSize="small">
-                  <i className="fa fa-clipboard" /> {t('Copy to Clipboard')}
+                  <i className="fa fa-clipboard" /> {t('Copy to Clipboard11')}
                 </Button>
               }
               hideTooltip
