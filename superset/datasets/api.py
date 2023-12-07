@@ -30,17 +30,10 @@ from flask_babel import ngettext
 from marshmallow import ValidationError
 
 from superset import event_logger, is_feature_enabled
-from superset.commands.exceptions import CommandException
-from superset.commands.importers.exceptions import NoValidFilesFoundError
-from superset.commands.importers.v1.utils import get_contents_from_bundle
-from superset.connectors.sqla.models import SqlaTable
-from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP, RouteMethod
-from superset.daos.dataset import DatasetDAO
-from superset.databases.filters import DatabaseFilter
-from superset.datasets.commands.create import CreateDatasetCommand
-from superset.datasets.commands.delete import DeleteDatasetCommand
-from superset.datasets.commands.duplicate import DuplicateDatasetCommand
-from superset.datasets.commands.exceptions import (
+from superset.commands.dataset.create import CreateDatasetCommand
+from superset.commands.dataset.delete import DeleteDatasetCommand
+from superset.commands.dataset.duplicate import DuplicateDatasetCommand
+from superset.commands.dataset.exceptions import (
     DatasetCreateFailedError,
     DatasetDeleteFailedError,
     DatasetForbiddenError,
@@ -49,11 +42,18 @@ from superset.datasets.commands.exceptions import (
     DatasetRefreshFailedError,
     DatasetUpdateFailedError,
 )
-from superset.datasets.commands.export import ExportDatasetsCommand
-from superset.datasets.commands.importers.dispatcher import ImportDatasetsCommand
-from superset.datasets.commands.refresh import RefreshDatasetCommand
-from superset.datasets.commands.update import UpdateDatasetCommand
-from superset.datasets.commands.warm_up_cache import DatasetWarmUpCacheCommand
+from superset.commands.dataset.export import ExportDatasetsCommand
+from superset.commands.dataset.importers.dispatcher import ImportDatasetsCommand
+from superset.commands.dataset.refresh import RefreshDatasetCommand
+from superset.commands.dataset.update import UpdateDatasetCommand
+from superset.commands.dataset.warm_up_cache import DatasetWarmUpCacheCommand
+from superset.commands.exceptions import CommandException
+from superset.commands.importers.exceptions import NoValidFilesFoundError
+from superset.commands.importers.v1.utils import get_contents_from_bundle
+from superset.connectors.sqla.models import SqlaTable
+from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP, RouteMethod
+from superset.daos.dataset import DatasetDAO
+from superset.databases.filters import DatabaseFilter
 from superset.datasets.filters import DatasetCertifiedFilter, DatasetIsNullOrEmptyFilter
 from superset.datasets.schemas import (
     DatasetCacheWarmUpRequestSchema,
@@ -65,6 +65,7 @@ from superset.datasets.schemas import (
     get_delete_ids_schema,
     get_export_ids_schema,
     GetOrCreateDatasetSchema,
+    openapi_spec_methods_override,
 )
 from superset.utils.core import parse_boolean_string
 from superset.views.base import DatasourceFilter, generate_download_headers
@@ -141,6 +142,8 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         "schema",
         "description",
         "main_dttm_col",
+        "normalize_columns",
+        "always_filter_main_dttm",
         "offset",
         "default_endpoint",
         "cache_timeout",
@@ -218,6 +221,8 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         "schema",
         "description",
         "main_dttm_col",
+        "normalize_columns",
+        "always_filter_main_dttm",
         "offset",
         "default_endpoint",
         "cache_timeout",
@@ -242,8 +247,17 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         "sql": [DatasetIsNullOrEmptyFilter],
         "id": [DatasetCertifiedFilter],
     }
-    search_columns = ["id", "database", "owners", "schema", "sql", "table_name"]
-    allowed_rel_fields = {"database", "owners"}
+    search_columns = [
+        "id",
+        "database",
+        "owners",
+        "schema",
+        "sql",
+        "table_name",
+        "created_by",
+        "changed_by",
+    ]
+    allowed_rel_fields = {"database", "owners", "created_by", "changed_by"}
     allowed_distinct_fields = {"schema"}
 
     apispec_parameter_schemas = {
@@ -256,6 +270,9 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         DatasetDuplicateSchema,
         GetOrCreateDatasetSchema,
     )
+
+    openapi_spec_methods = openapi_spec_methods_override
+    """ Overrides GET methods OpenApi descriptions """
 
     list_outer_default_load = True
     show_outer_default_load = True
@@ -270,11 +287,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
     )
     @requires_json
     def post(self) -> Response:
-        """Creates a new Dataset
+        """Create a new dataset.
         ---
         post:
-          description: >-
-            Create a new Dataset
+          summary: Create a new dataset
           requestBody:
             description: Dataset schema
             required: true
@@ -325,7 +341,6 @@ class DatasetRestApi(BaseSupersetModelRestApi):
 
     @expose("/<pk>", methods=("PUT",))
     @protect()
-    @safe
     @statsd_metrics
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.put",
@@ -333,11 +348,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
     )
     @requires_json
     def put(self, pk: int) -> Response:
-        """Changes a Dataset
+        """Update a dataset.
         ---
         put:
-          description: >-
-            Changes a Dataset
+          summary: Update a dataset
           parameters:
           - in: path
             schema:
@@ -419,11 +433,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def delete(self, pk: int) -> Response:
-        """Deletes a Dataset
+        """Delete a Dataset.
         ---
         delete:
-          description: >-
-            Deletes a Dataset
+          summary: Delete a dataset
           parameters:
           - in: path
             schema:
@@ -474,13 +487,12 @@ class DatasetRestApi(BaseSupersetModelRestApi):
     @event_logger.log_this_with_context(
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.export",
         log_to_statsd=False,
-    )  # pylint: disable=too-many-locals
-    def export(self, **kwargs: Any) -> Response:
-        """Export datasets
+    )
+    def export(self, **kwargs: Any) -> Response:  # pylint: disable=too-many-locals
+        """Download multiple datasets as YAML files.
         ---
         get:
-          description: >-
-            Exports multiple datasets and downloads them as YAML files
+          summary: Download multiple datasets as YAML files
           parameters:
           - in: query
             name: q
@@ -560,11 +572,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
     )
     @requires_json
     def duplicate(self) -> Response:
-        """Duplicates a Dataset
+        """Duplicate a dataset.
         ---
         post:
-          description: >-
-            Duplicates a Dataset
+          summary: Duplicate a dataset
           requestBody:
             description: Dataset schema
             required: true
@@ -630,11 +641,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def refresh(self, pk: int) -> Response:
-        """Refresh a Dataset
+        """Refresh and update columns of a dataset.
         ---
         put:
-          description: >-
-            Refreshes and updates columns of a dataset
+          summary: Refresh and update columns of a dataset
           parameters:
           - in: path
             schema:
@@ -687,11 +697,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def related_objects(self, pk: int) -> Response:
-        """Get charts and dashboards count associated to a dataset
+        """Get charts and dashboards count associated to a dataset.
         ---
         get:
-          description:
-            Get charts and dashboards count associated to a dataset
+          summary: Get charts and dashboards count associated to a dataset
           parameters:
           - in: path
             name: pk
@@ -749,11 +758,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def bulk_delete(self, **kwargs: Any) -> Response:
-        """Delete bulk Datasets
+        """Bulk delete datasets.
         ---
         delete:
-          description: >-
-            Deletes multiple Datasets in a bulk operation.
+          summary: Bulk delete datasets
           parameters:
           - in: query
             name: q
@@ -811,9 +819,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
     )
     @requires_form_data
     def import_(self) -> Response:
-        """Import dataset(s) with associated databases
+        """Import dataset(s) with associated databases.
         ---
         post:
+          summary: Import dataset(s) with associated databases
           requestBody:
             required: true
             content:
@@ -945,7 +954,7 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def get_or_create_dataset(self) -> Response:
-        """Retrieve a dataset by name, or create it if it does not exist
+        """Retrieve a dataset by name, or create it if it does not exist.
         ---
         post:
           summary: Retrieve a table by name, or create it if it does not exist
@@ -1011,11 +1020,10 @@ class DatasetRestApi(BaseSupersetModelRestApi):
         log_to_statsd=False,
     )
     def warm_up_cache(self) -> Response:
-        """
+        """Warm up the cache for each chart powered by the given table.
         ---
         put:
-          summary: >-
-            Warms up the cache for each chart powered by the given table
+          summary: Warm up the cache for each chart powered by the given table
           description: >-
             Warms up the cache for the table.
             Note for slices a force refresh occurs.
