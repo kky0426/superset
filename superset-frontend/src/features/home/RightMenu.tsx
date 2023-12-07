@@ -174,12 +174,12 @@ const RightMenu = ({
           name: GlobalMenuDataOptions.DB_CONNECTION,
           perm: canDatabase && !nonExamplesDBConnected,
         },
-        {
-          label: t('Create dataset'),
-          name: GlobalMenuDataOptions.DATASET_CREATION,
-          url: '/dataset/add/',
-          perm: canDataset && nonExamplesDBConnected,
-        },
+        // {
+        //   label: t('Create dataset'),
+        //   name: GlobalMenuDataOptions.DATASET_CREATION,
+        //   url: '/dataset/add/',
+        //   perm: canDataset && nonExamplesDBConnected,
+        // },
         {
           label: t('Connect Google Sheet'),
           name: GlobalMenuDataOptions.GOOGLE_SHEETS,
