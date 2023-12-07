@@ -21,11 +21,11 @@ import { t, styled } from '@superset-ui/core';
 import { Row, Col } from 'src/components';
 import Tabs from 'src/components/Tabs';
 import { BootstrapUser } from 'src/types/bootstrapTypes';
-import Favorites from './Favorites';
+// import Favorites from './Favorites';
 import UserInfo from './UserInfo';
 import Security from './Security';
 import RecentActivity from './RecentActivity';
-import CreatedContent from './CreatedContent';
+// import CreatedContent from './CreatedContent';
 
 interface AppProps {
   user: BootstrapUser;
@@ -45,7 +45,7 @@ export default function App({ user }: AppProps) {
         </Col>
         <Col xs={24} md={18}>
           <Tabs centered>
-            <StyledTabPane
+            {/* <StyledTabPane
               key="1"
               tab={
                 <div>
@@ -54,8 +54,8 @@ export default function App({ user }: AppProps) {
               }
             >
               <Favorites user={user} />
-            </StyledTabPane>
-            <StyledTabPane
+            </StyledTabPane> */}
+            {/* <StyledTabPane
               key="2"
               tab={
                 <div>
@@ -64,7 +64,7 @@ export default function App({ user }: AppProps) {
               }
             >
               <CreatedContent user={user} />
-            </StyledTabPane>
+            </StyledTabPane> */}
             <StyledTabPane
               key="3"
               tab={

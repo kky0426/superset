@@ -43,7 +43,7 @@ import {
   UserWithPermissionsAndRoles,
   MenuObjectChildProps,
 } from 'src/types/bootstrapTypes';
-import { RootState } from 'src/dashboard/types';
+// import { RootState } from 'src/dashboard/types';
 import DatabaseModal from 'src/features/databases/DatabaseModal';
 import { uploadUserPerms } from 'src/views/CRUD/utils';
 import LanguagePicker from './LanguagePicker';
@@ -129,9 +129,9 @@ const RightMenu = ({
   const user = useSelector<any, UserWithPermissionsAndRoles>(
     state => state.user,
   );
-  const dashboardId = useSelector<RootState, number | undefined>(
-    state => state.dashboardInfo?.id,
-  );
+  // const dashboardId = useSelector<RootState, number | undefined>(
+  //   state => state.dashboardInfo?.id,
+  // );
   const userValues = user || {};
   const { roles } = userValues;
   const {
@@ -174,12 +174,12 @@ const RightMenu = ({
           name: GlobalMenuDataOptions.DB_CONNECTION,
           perm: canDatabase && !nonExamplesDBConnected,
         },
-        {
-          label: t('Create dataset'),
-          name: GlobalMenuDataOptions.DATASET_CREATION,
-          url: '/dataset/add/',
-          perm: canDataset && nonExamplesDBConnected,
-        },
+        // {
+        //   label: t('Create dataset'),
+        //   name: GlobalMenuDataOptions.DATASET_CREATION,
+        //   url: '/dataset/add/',
+        //   perm: canDataset && nonExamplesDBConnected,
+        // },
         {
           label: t('Connect Google Sheet'),
           name: GlobalMenuDataOptions.GOOGLE_SHEETS,
@@ -215,22 +215,22 @@ const RightMenu = ({
       perm: 'can_sqllab',
       view: 'Superset',
     },
-    {
-      label: t('Chart'),
-      url: Number.isInteger(dashboardId)
-        ? `/chart/add?dashboard_id=${dashboardId}`
-        : '/chart/add',
-      icon: 'fa-fw fa-bar-chart',
-      perm: 'can_write',
-      view: 'Chart',
-    },
-    {
-      label: t('Dashboard'),
-      url: '/dashboard/new',
-      icon: 'fa-fw fa-dashboard',
-      perm: 'can_write',
-      view: 'Dashboard',
-    },
+    // {
+    //   label: t('Chart'),
+    //   url: Number.isInteger(dashboardId)
+    //     ? `/chart/add?dashboard_id=${dashboardId}`
+    //     : '/chart/add',
+    //   icon: 'fa-fw fa-bar-chart',
+    //   perm: 'can_write',
+    //   view: 'Chart',
+    // },
+    // {
+    //   label: t('Dashboard'),
+    //   url: '/dashboard/new',
+    //   icon: 'fa-fw fa-dashboard',
+    //   perm: 'can_write',
+    //   view: 'Dashboard',
+    // },
   ];
 
   const checkAllowUploads = () => {
