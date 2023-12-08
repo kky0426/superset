@@ -93,9 +93,11 @@ from superset.views.base_api import (
 from superset.views.filters import BaseFilterRelatedUsers, FilterRelatedOwners
 from superset.views.base import handle_api_exception
 
-from superset.charts.commands.exceptions import (
+
+from superset.commands.chart.exceptions import (
     ChartAccessDeniedError,
 )
+
 logger = logging.getLogger(__name__)
 config = app.config
 

@@ -24,7 +24,7 @@ Create Date: 2023-07-19 16:48:05.571149
 
 # revision identifiers, used by Alembic.
 revision = "a23c6f8b1280"
-down_revision = "863adcf72773"
+down_revision = "5f91ce24af12"
 
 
 import json

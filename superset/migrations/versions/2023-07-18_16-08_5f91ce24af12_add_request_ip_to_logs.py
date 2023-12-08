@@ -1,7 +1,7 @@
 
 
 revision = "5f91ce24af12"
-down_revision = "6d05b0a70c89"
+down_revision = "863adcf72773"
 
 import sqlalchemy as sa
 from alembic import op

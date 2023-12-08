@@ -17,18 +17,15 @@
  * under the License.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { css, styled, t, useTheme } from '@superset-ui/core';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   css,
-  isFeatureEnabled,
-  FeatureFlag,
+  // isFeatureEnabled,
+  // FeatureFlag,
   styled,
   t,
   useTheme,
 } from '@superset-ui/core';
-// import Icons from 'src/components/Icons';
 import { Menu } from 'src/components/Menu';
 import ModalTrigger from 'src/components/ModalTrigger';
 import Button from 'src/components/Button';
