@@ -102,6 +102,18 @@ services:
     env_file: docker/.env-non-dev
     command: server /data --console-address ":9001"
     restart: unless-stopped
+  
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/test2;
+      /usr/bin/mc policy set public myminio/test2;
+      exit 0;
+      "
 
   mysql:
     image: library/mysql:5.7
