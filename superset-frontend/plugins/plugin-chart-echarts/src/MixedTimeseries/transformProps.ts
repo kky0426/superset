@@ -36,9 +36,9 @@ import {
   ensureIsArray,
   buildCustomFormatters,
   ValueFormatter,
-  NumberFormatter,
   QueryFormMetric,
   getCustomFormatter,
+  CurrencyFormatter,
 } from '@superset-ui/core';
 import { getOriginalSeries } from '@superset-ui/chart-controls';
 import { EChartsCoreOption, SeriesOption } from 'echarts';
@@ -78,8 +78,6 @@ import { convertInteger } from '../utils/convertInteger';
 import { defaultGrid, defaultYAxis } from '../defaults';
 import {
   getPadding,
-  getTooltipTimeFormatter,
-  getXAxisFormatter,
   transformEventAnnotation,
   transformFormulaAnnotation,
   transformIntervalAnnotation,
@@ -88,11 +86,15 @@ import {
 } from '../Timeseries/transformers';
 import { TIMESERIES_CONSTANTS, TIMEGRAIN_TO_TIMESTAMP } from '../constants';
 import { getDefaultTooltip } from '../utils/tooltip';
-import { getYAxisFormatter } from '../utils/getYAxisFormatter';
+import {
+  getTooltipTimeFormatter,
+  getXAxisFormatter,
+  getYAxisFormatter,
+} from '../utils/formatters';
 
 const getFormatter = (
   customFormatters: Record<string, ValueFormatter>,
-  defaultFormatter: NumberFormatter,
+  defaultFormatter: ValueFormatter,
   metrics: QueryFormMetric[],
   formatterKey: string,
   forcePercentFormat: boolean,
@@ -121,6 +123,9 @@ export default function transformProps(
     inContextMenu,
     emitCrossFilters,
   } = chartProps;
+
+  let focusedSeries: string | null = null;
+
   const {
     verboseMap = {},
     currencyFormats = {},
@@ -164,7 +169,9 @@ export default function transformProps(
     truncateYAxis,
     tooltipTimeFormat,
     yAxisFormat,
+    currencyFormat,
     yAxisFormatSecondary,
+    currencyFormatSecondary,
     xAxisTimeFormat,
     yAxisBounds,
     yAxisBoundsSecondary,
@@ -218,21 +225,32 @@ export default function transformProps(
   const xAxisDataType = dataTypes?.[xAxisLabel] ?? dataTypes?.[xAxisOrig];
   const xAxisType = getAxisType(xAxisDataType);
   const series: SeriesOption[] = [];
-  const formatter = getNumberFormatter(contributionMode ? ',.0%' : yAxisFormat);
-  const formatterSecondary = getNumberFormatter(
-    contributionMode ? ',.0%' : yAxisFormatSecondary,
-  );
+  const formatter = contributionMode
+    ? getNumberFormatter(',.0%')
+    : currencyFormat?.symbol
+    ? new CurrencyFormatter({ d3Format: yAxisFormat, currency: currencyFormat })
+    : getNumberFormatter(yAxisFormat);
+  const formatterSecondary = contributionMode
+    ? getNumberFormatter(',.0%')
+    : currencyFormatSecondary?.symbol
+    ? new CurrencyFormatter({
+        d3Format: yAxisFormatSecondary,
+        currency: currencyFormatSecondary,
+      })
+    : getNumberFormatter(yAxisFormatSecondary);
   const customFormatters = buildCustomFormatters(
     [...ensureIsArray(metrics), ...ensureIsArray(metricsB)],
     currencyFormats,
     columnFormats,
     yAxisFormat,
+    currencyFormat,
   );
   const customFormattersSecondary = buildCustomFormatters(
     [...ensureIsArray(metrics), ...ensureIsArray(metricsB)],
     currencyFormats,
     columnFormats,
     yAxisFormatSecondary,
+    currencyFormatSecondary,
   );
 
   const primarySeries = new Set<string>();
@@ -495,7 +513,7 @@ export default function transformProps(
             metrics,
             !!contributionMode,
             customFormatters,
-            yAxisFormat,
+            formatter,
           ),
         },
         scale: truncateYAxis,
@@ -517,7 +535,7 @@ export default function transformProps(
             metricsB,
             !!contributionMode,
             customFormattersSecondary,
-            yAxisFormatSecondary,
+            formatterSecondary,
           ),
         },
         scale: truncateYAxis,
@@ -576,7 +594,9 @@ export default function transformProps(
               ? tooltipFormatter
               : tooltipFormatterSecondary,
           });
-          rows.push(`<span style="opacity: 0.7">${content}</span>`);
+          const contentStyle =
+            key === focusedSeries ? 'font-weight: 700' : 'opacity: 0.7';
+          rows.push(`<span style="${contentStyle}">${content}</span>`);
         });
         return rows.join('<br />');
       },
@@ -627,6 +647,10 @@ export default function transformProps(
       : [],
   };
 
+  const onFocusedSeries = (seriesName: string | null) => {
+    focusedSeries = seriesName;
+  };
+
   return {
     formData,
     width,
@@ -641,6 +665,7 @@ export default function transformProps(
     seriesBreakdown: rawSeriesA.length,
     selectedValues: filterState.selectedValues || [],
     onContextMenu,
+    onFocusedSeries,
     xValueFormatter: tooltipFormatter,
     xAxis: {
       label: xAxisLabel,

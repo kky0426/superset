@@ -15,11 +15,12 @@
 # limitations under the License.
 #
 x-superset-image: &superset-image custom-superset-v1
+# x-superset-image: &superset-image apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
 x-superset-depends-on: &superset-depends-on
   - db
   - redis
-x-superset-volumes: &superset-volumes
-  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+x-superset-volumes:
+  &superset-volumes # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
   - ./docker:/app/docker
   - superset_home:/app/superset_home
 
@@ -35,11 +36,12 @@ services:
       - "6379:6379"
   db:
     env_file: docker/.env-non-dev
-    image: postgres:14
+    image: postgres:15
     container_name: superset_db
     restart: unless-stopped
     volumes:
       - db_home:/var/lib/postgresql/data
+      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   superset:
     env_file: docker/.env-non-dev
@@ -74,7 +76,11 @@ services:
     user: "root"
     volumes: *superset-volumes
     healthcheck:
-      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+        ]
 
   superset-worker-beat:
     image: *superset-image
@@ -96,6 +102,18 @@ services:
     env_file: docker/.env-non-dev
     command: server /data --console-address ":9001"
     restart: unless-stopped
+  
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/test2;
+      /usr/bin/mc policy set public myminio/test2;
+      exit 0;
+      "
 
   mysql:
     image: library/mysql:5.7

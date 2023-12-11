@@ -21,9 +21,12 @@ import { invert } from 'lodash';
 import {
   AnnotationLayer,
   AxisType,
+  buildCustomFormatters,
   CategoricalColorNamespace,
+  CurrencyFormatter,
   ensureIsArray,
   GenericDataType,
+  getCustomFormatter,
   getMetricLabel,
   getNumberFormatter,
   getXAxisLabel,
@@ -35,8 +38,6 @@ import {
   isTimeseriesAnnotationLayer,
   t,
   TimeseriesChartDataResponseResult,
-  buildCustomFormatters,
-  getCustomFormatter,
 } from '@superset-ui/core';
 import {
   extractExtraMetrics,
@@ -48,8 +49,8 @@ import { ZRLineType } from 'echarts/types/src/util/types';
 import {
   EchartsTimeseriesChartProps,
   EchartsTimeseriesFormData,
-  TimeseriesChartTransformedProps,
   OrientationType,
+  TimeseriesChartTransformedProps,
 } from './types';
 import { DEFAULT_FORM_DATA } from './constants';
 import { ForecastSeriesEnum, ForecastValue, Refs } from '../types';
@@ -80,8 +81,6 @@ import { defaultGrid, defaultYAxis } from '../defaults';
 import {
   getBaselineSeriesForStream,
   getPadding,
-  getTooltipTimeFormatter,
-  getXAxisFormatter,
   transformEventAnnotation,
   transformFormulaAnnotation,
   transformIntervalAnnotation,
@@ -90,11 +89,15 @@ import {
 } from './transformers';
 import {
   StackControlsValue,
-  TIMESERIES_CONSTANTS,
   TIMEGRAIN_TO_TIMESTAMP,
+  TIMESERIES_CONSTANTS,
 } from '../constants';
 import { getDefaultTooltip } from '../utils/tooltip';
-import { getYAxisFormatter } from '../utils/getYAxisFormatter';
+import {
+  getTooltipTimeFormatter,
+  getXAxisFormatter,
+  getYAxisFormatter,
+} from '../utils/formatters';
 
 export default function transformProps(
   chartProps: EchartsTimeseriesChartProps,
@@ -112,6 +115,9 @@ export default function transformProps(
     inContextMenu,
     emitCrossFilters,
   } = chartProps;
+
+  let focusedSeries: string | null = null;
+
   const {
     verboseMap = {},
     columnFormats = {},
@@ -165,6 +171,7 @@ export default function transformProps(
     xAxisTitleMargin,
     yAxisBounds,
     yAxisFormat,
+    currencyFormat,
     yAxisTitle,
     yAxisTitleMargin,
     yAxisTitlePosition,
@@ -242,12 +249,15 @@ export default function transformProps(
 
   const forcePercentFormatter = Boolean(contributionMode || isAreaExpand);
   const percentFormatter = getNumberFormatter(',.0%');
-  const defaultFormatter = getNumberFormatter(yAxisFormat);
+  const defaultFormatter = currencyFormat?.symbol
+    ? new CurrencyFormatter({ d3Format: yAxisFormat, currency: currencyFormat })
+    : getNumberFormatter(yAxisFormat);
   const customFormatters = buildCustomFormatters(
     metrics,
     currencyFormats,
     columnFormats,
     yAxisFormat,
+    currencyFormat,
   );
 
   const array = ensureIsArray(chartProps.rawFormData?.time_compare);
@@ -443,16 +453,6 @@ export default function transformProps(
         ? TIMEGRAIN_TO_TIMESTAMP[timeGrainSqla]
         : 0,
   };
-
-  if (xAxisType === AxisType.time) {
-    /**
-     * Overriding default behavior (false) for time axis regardless of the granilarity.
-     * Not including this in the initial declaration above so if echarts changes the default
-     * behavior for other axist types we won't unintentionally override it
-     */
-    xAxis.axisLabel.showMaxLabel = null;
-  }
-
   let yAxis: any = {
     ...defaultYAxis,
     type: logAxis ? AxisType.log : AxisType.value,
@@ -465,7 +465,7 @@ export default function transformProps(
         metrics,
         forcePercentFormatter,
         customFormatters,
-        yAxisFormat,
+        defaultFormatter,
       ),
     },
     scale: truncateYAxis,
@@ -524,11 +524,9 @@ export default function transformProps(
               : getCustomFormatter(customFormatters, metrics, formatterKey) ??
                 defaultFormatter,
           });
-          if (!legendState || legendState[key]) {
-            rows.push(`<span style="font-weight: 700">${content}</span>`);
-          } else {
-            rows.push(`<span style="opacity: 0.7">${content}</span>`);
-          }
+          const contentStyle =
+            key === focusedSeries ? 'font-weight: 700' : 'opacity: 0.7';
+          rows.push(`<span style="${contentStyle}">${content}</span>`);
         });
         if (stack) {
           rows.reverse();
@@ -575,6 +573,10 @@ export default function transformProps(
       : [],
   };
 
+  const onFocusedSeries = (seriesName: string | null) => {
+    focusedSeries = seriesName;
+  };
+
   return {
     echartOptions,
     emitCrossFilters,
@@ -589,6 +591,7 @@ export default function transformProps(
     legendData,
     onContextMenu,
     onLegendStateChanged,
+    onFocusedSeries,
     xValueFormatter: tooltipFormatter,
     xAxis: {
       label: xAxisLabel,

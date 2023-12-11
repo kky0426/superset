@@ -32,21 +32,6 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 from werkzeug.wsgi import FileWrapper
 
 from superset import app, is_feature_enabled, thumbnail_cache
-from superset.charts.commands.create import CreateChartCommand
-from superset.charts.commands.delete import DeleteChartCommand
-from superset.charts.commands.exceptions import (
-    ChartCreateFailedError,
-    ChartDeleteFailedError,
-    ChartForbiddenError,
-    ChartInvalidError,
-    ChartNotFoundError,
-    ChartUpdateFailedError,
-    DashboardsForbiddenError,
-)
-from superset.charts.commands.export import ExportChartsCommand
-from superset.charts.commands.importers.dispatcher import ImportChartsCommand
-from superset.charts.commands.update import UpdateChartCommand
-from superset.charts.commands.warm_up_cache import ChartWarmUpCacheCommand
 from superset.charts.filters import (
     ChartAllTextFilter,
     ChartCertifiedFilter,
@@ -69,6 +54,21 @@ from superset.charts.schemas import (
     screenshot_query_schema,
     thumbnail_query_schema,
 )
+from superset.commands.chart.create import CreateChartCommand
+from superset.commands.chart.delete import DeleteChartCommand
+from superset.commands.chart.exceptions import (
+    ChartCreateFailedError,
+    ChartDeleteFailedError,
+    ChartForbiddenError,
+    ChartInvalidError,
+    ChartNotFoundError,
+    ChartUpdateFailedError,
+    DashboardsForbiddenError,
+)
+from superset.commands.chart.export import ExportChartsCommand
+from superset.commands.chart.importers.dispatcher import ImportChartsCommand
+from superset.commands.chart.update import UpdateChartCommand
+from superset.commands.chart.warm_up_cache import ChartWarmUpCacheCommand
 from superset.commands.exceptions import CommandException
 from superset.commands.importers.exceptions import (
     IncorrectFormatError,
@@ -93,9 +93,11 @@ from superset.views.base_api import (
 from superset.views.filters import BaseFilterRelatedUsers, FilterRelatedOwners
 from superset.views.base import handle_api_exception
 
-from superset.charts.commands.exceptions import (
+
+from superset.commands.chart.exceptions import (
     ChartAccessDeniedError,
 )
+
 logger = logging.getLogger(__name__)
 config = app.config
 
@@ -277,7 +279,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         "created_by": RelatedFieldFilter("first_name", FilterRelatedOwners),
     }
 
-    allowed_rel_fields = {"owners", "created_by"}
+    allowed_rel_fields = {"owners", "created_by", "changed_by"}
 
     @expose("/", methods=("POST",))
     @protect()
@@ -290,11 +292,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
     )
     @requires_json
     def post(self) -> Response:
-        """Creates a new Chart
+        """Create a new chart.
         ---
         post:
-          description: >-
-            Create a new Chart.
+          summary: Create a new chart
           requestBody:
             description: Chart schema
             required: true
@@ -357,11 +358,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
     )
     @requires_json
     def put(self, pk: int) -> Response:
-        """Changes a Chart
+        """Update a chart.
         ---
         put:
-          description: >-
-            Changes a Chart.
+          summary: Update a chart
           parameters:
           - in: path
             schema:
@@ -434,11 +434,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def delete(self, pk: int) -> Response:
-        """Deletes a Chart
+        """Delete a chart.
         ---
         delete:
-          description: >-
-            Deletes a Chart.
+          summary: Delete a chart
           parameters:
           - in: path
             schema:
@@ -492,11 +491,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def bulk_delete(self, **kwargs: Any) -> Response:
-        """Delete bulk Charts
+        """Bulk delete charts.
         ---
         delete:
-          description: >-
-            Deletes multiple Charts in a bulk operation.
+          summary: Bulk delete charts
           parameters:
           - in: query
             name: q
@@ -553,10 +551,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def cache_screenshot(self, pk: int, **kwargs: Any) -> WerkzeugResponse:
-        """
+        """Compute and cache a screenshot.
         ---
         get:
-          description: Compute and cache a screenshot.
+          summary: Compute and cache a screenshot
           parameters:
           - in: path
             schema:
@@ -626,10 +624,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def screenshot(self, pk: int, digest: str) -> WerkzeugResponse:
-        """Get Chart screenshot
+        """Get a computed screenshot from cache.
         ---
         get:
-          description: Get a computed screenshot from cache.
+          summary: Get a computed screenshot from cache
           parameters:
           - in: path
             schema:
@@ -681,9 +679,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def thumbnail(self, pk: int, digest: str, **kwargs: Any) -> WerkzeugResponse:
-        """Get Chart thumbnail
+        """Compute or get already computed chart thumbnail from cache.
         ---
         get:
+          summary: Get chart thumbnail
           description: Compute or get already computed chart thumbnail from cache.
           parameters:
           - in: path
@@ -769,11 +768,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def export(self, **kwargs: Any) -> Response:
-        """Export charts
+        """Download multiple charts as YAML files.
         ---
         get:
-          description: >-
-            Exports multiple charts and downloads them as YAML files
+          summary: Download multiple charts as YAML files
           parameters:
           - in: query
             name: q
@@ -835,11 +833,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def favorite_status(self, **kwargs: Any) -> Response:
-        """Favorite stars for Charts
+        """Check favorited charts for current user.
         ---
         get:
-          description: >-
-            Check favorited dashboards for current user
+          summary: Check favorited charts for current user
           parameters:
           - in: query
             name: q
@@ -885,11 +882,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled = True,
     )
     def add_favorite(self, pk: int) -> Response:
-        """Marks the chart as favorite
+        """Mark the chart as favorite for the current user.
         ---
         post:
-          description: >-
-            Marks the chart as favorite for the current user
+          summary: Mark the chart as favorite for the current user
           parameters:
           - in: path
             schema:
@@ -929,11 +925,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
     #     log_to_statsd=False,
     # )
     def remove_favorite(self, pk: int) -> Response:
-        """Remove the chart from the user favorite list
+        """Remove the chart from the user favorite list.
         ---
         delete:
-          description: >-
-            Remove the chart from the user favorite list
+          summary: Remove the chart from the user favorite list
           parameters:
           - in: path
             schema:
@@ -974,11 +969,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
         disabled=True,
     )
     def warm_up_cache(self) -> Response:
-        """
+        """Warm up the cache for the chart.
         ---
         put:
-          summary: >-
-            Warms up the cache for the chart
+          summary: Warm up the cache for the chart
           description: >-
             Warms up the cache for the chart.
             Note for slices a force refresh occurs.
@@ -1031,9 +1025,10 @@ class ChartRestApi(BaseSupersetModelRestApi):
     )
     @requires_form_data
     def import_(self) -> Response:
-        """Import chart(s) with associated datasets and databases
+        """Import chart(s) with associated datasets and databases.
         ---
         post:
+          summary: Import chart(s) with associated datasets and databases
           requestBody:
             required: true
             content:
