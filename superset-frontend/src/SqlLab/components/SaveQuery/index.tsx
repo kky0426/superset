@@ -23,7 +23,7 @@ import { Row, Col } from 'src/components';
 import { Input, TextArea } from 'src/components/Input';
 import { t, styled } from '@superset-ui/core';
 import Button from 'src/components/Button';
-import { Menu } from 'src/components/Menu';
+// import { Menu } from 'src/components/Menu';
 import { Form, FormItem } from 'src/components/Form';
 import Modal from 'src/components/Modal';
 import SaveDatasetActionButton from 'src/SqlLab/components/SaveDatasetActionButton';
@@ -99,17 +99,17 @@ const SaveQuery = ({
   const [showSave, setShowSave] = useState<boolean>(false);
   const [showSaveDatasetModal, setShowSaveDatasetModal] = useState(false);
   const isSaved = !!query.remoteId;
-  const canExploreDatabase = !!database?.allows_virtual_table_explore;
+  // const canExploreDatabase = !!database?.allows_virtual_table_explore;
   const shouldShowSaveButton =
     database?.allows_virtual_table_explore !== undefined;
 
-  const overlayMenu = (
-    <Menu>
-      <Menu.Item onClick={() => setShowSaveDatasetModal(true)}>
-        {t('Save dataset')}
-      </Menu.Item>
-    </Menu>
-  );
+  // const overlayMenu = (
+  //   <Menu>
+  //     <Menu.Item onClick={() => setShowSaveDatasetModal(true)}>
+  //       {t('Save dataset')}
+  //     </Menu.Item>
+  //   </Menu>
+  // );
 
   const queryPayload = () => ({
     name: label,
@@ -185,10 +185,7 @@ const SaveQuery = ({
   return (
     <Styles className="SaveQuery">
       {shouldShowSaveButton && (
-        <SaveDatasetActionButton
-          setShowSave={setShowSave}
-          overlayMenu={canExploreDatabase ? overlayMenu : null}
-        />
+        <SaveDatasetActionButton setShowSave={setShowSave} overlayMenu={null} />
       )}
       <SaveDatasetModal
         visible={showSaveDatasetModal}
