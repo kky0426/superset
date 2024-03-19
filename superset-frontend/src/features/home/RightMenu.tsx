@@ -184,7 +184,7 @@ const RightMenu = ({
         {
           label: t('Connect Google Sheet'),
           name: GlobalMenuDataOptions.GoogleSheets,
-          perm: canDatabase && HAS_GSHEETS_INSTALLED,
+          perm: isAdmin && HAS_GSHEETS_INSTALLED,
         },
         {
           label: t('Upload CSV to database'),
