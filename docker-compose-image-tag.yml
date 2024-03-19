@@ -33,7 +33,7 @@ services:
       - redis:/data
 
   db:
-    env_file: docker/.env
+    env_file: docker/.env-non-dev
     image: postgres:15
     container_name: superset_db
     restart: unless-stopped
@@ -42,7 +42,7 @@ services:
       - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   superset:
-    env_file: docker/.env
+    env_file: docker/.env-non-dev
     image: *superset-image
     container_name: superset_app
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
@@ -57,7 +57,7 @@ services:
     image: *superset-image
     container_name: superset_init
     command: ["/app/docker/docker-init.sh"]
-    env_file: docker/.env
+    env_file: docker/.env-non-dev
     depends_on: *superset-depends-on
     user: "root"
     volumes: *superset-volumes
@@ -68,7 +68,7 @@ services:
     image: *superset-image
     container_name: superset_worker
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
-    env_file: docker/.env
+    env_file: docker/.env-non-dev
     restart: unless-stopped
     depends_on: *superset-depends-on
     user: "root"
@@ -84,13 +84,50 @@ services:
     image: *superset-image
     container_name: superset_worker_beat
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
-    env_file: docker/.env
+    env_file: docker/.env-non-dev
     restart: unless-stopped
     depends_on: *superset-depends-on
     user: "root"
     volumes: *superset-volumes
     healthcheck:
       disable: true
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file: docker/.env-non-dev
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+  
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/test2;
+      /usr/bin/mc policy set public myminio/test2;
+      exit 0;
+      "
+
+  mysql:
+    image: library/mysql:5.7
+    container_name: connection-test-db
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Seoul
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_USER: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: test
+      DATABASE_HOST: 127.0.0.1
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    platform: linux/amd64    
 
 volumes:
   superset_home:

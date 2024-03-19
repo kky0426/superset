@@ -179,7 +179,7 @@ const RightMenu = ({
           label: t('Create dataset'),
           name: GlobalMenuDataOptions.DatasetCreation,
           url: '/dataset/add/',
-          perm: canDataset && nonExamplesDBConnected,
+          perm: isAdmin && nonExamplesDBConnected,
         },
         {
           label: t('Connect Google Sheet'),

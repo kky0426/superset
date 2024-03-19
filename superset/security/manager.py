@@ -139,56 +139,6 @@ custom.RoleModelView.edit_columns = ["name", "permissions", "user"]
 custom.RoleModelView.related_views = []
 
 
-def query_context_modified(query_context: "QueryContext") -> bool:
-    """
-    Check if a query context has been modified.
-
-    This is used to ensure guest users don't modify the payload and fetch data
-    different from what was shared with them in dashboards.
-    """
-    form_data = query_context.form_data
-    stored_chart = query_context.slice_
-
-    # sanity checks
-    if form_data is None or stored_chart is None:
-        return True
-
-    # cannot request a different chart
-    if form_data.get("slice_id") != stored_chart.id:
-        return True
-
-    # compare form_data
-    requested_metrics = {
-        frozenset(metric.items()) if isinstance(metric, dict) else metric
-        for metric in form_data.get("metrics") or []
-    }
-    stored_metrics = {
-        frozenset(metric.items()) if isinstance(metric, dict) else metric
-        for metric in stored_chart.params_dict.get("metrics") or []
-    }
-    if not requested_metrics.issubset(stored_metrics):
-        return True
-
-    # compare queries in query_context
-    queries_metrics = {
-        frozenset(metric.items()) if isinstance(metric, dict) else metric
-        for query in query_context.queries
-        for metric in query.metrics or []
-    }
-
-    if stored_chart.query_context:
-        stored_query_context = json.loads(cast(str, stored_chart.query_context))
-        for query in stored_query_context.get("queries") or []:
-            stored_metrics.update(
-                {
-                    frozenset(metric.items()) if isinstance(metric, dict) else metric
-                    for metric in query.get("metrics") or []
-                }
-            )
-
-    return not queries_metrics.issubset(stored_metrics)
-
-
 class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     SecurityManager
 ):
@@ -282,11 +232,13 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         "database_access",
         "schema_access",
         "datasource_access",
+        "table_deny",
     }
 
     ACCESSIBLE_PERMS = {"can_userinfo", "resetmypassword", "can_recent_activity"}
 
     SQLLAB_ONLY_PERMISSIONS = {
+        ("can_my_queries", "SqlLab"),
         ("can_read", "SavedQuery"),
         ("can_write", "SavedQuery"),
         ("can_export", "SavedQuery"),
@@ -441,6 +393,11 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             or self.can_access_all_databases()
             or self.can_access("database_access", database.perm)  # type: ignore
         )
+    
+    def deny_database(self, database: "Database") -> bool:
+        return (
+            self.can_access()
+        )
 
     def can_access_schema(self, datasource: "BaseDatasource") -> bool:
         """
@@ -520,7 +477,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             level=ErrorLevel.ERROR,
         )
 
-    def get_chart_access_error_object(
+    def get_chart_access_error_object(  # pylint: disable=invalid-name
         self,
         dashboard: "Dashboard",  # pylint: disable=unused-argument
     ) -> SupersetError:
@@ -643,7 +600,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         )
 
         # group all datasources by database
-        all_datasources = SqlaTable.get_all_datasources()
+        all_datasources = SqlaTable.get_all_datasources(self.get_session)
         datasources_by_database: dict["Database", set["SqlaTable"]] = defaultdict(set)
         for datasource in all_datasources:
             datasources_by_database[datasource.database].add(datasource)
@@ -781,7 +738,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         user_perms = self.user_view_menu_names("datasource_access")
         schema_perms = self.user_view_menu_names("schema_access")
         user_datasources = SqlaTable.query_datasources_by_permissions(
-            database, user_perms, schema_perms
+            self.get_session, database, user_perms, schema_perms
         )
         if schema:
             names = {d.table_name for d in user_datasources if d.schema == schema}
@@ -824,7 +781,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         self.add_permission_view_menu("can_csv", "Superset")
         self.add_permission_view_menu("can_share_dashboard", "Superset")
         self.add_permission_view_menu("can_share_chart", "Superset")
-        self.add_permission_view_menu("can_sqllab", "Superset")
         self.add_permission_view_menu("can_view_query", "Dashboard")
         self.add_permission_view_menu("can_view_chart_as_table", "Dashboard")
 
@@ -849,7 +805,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                 self.add_permission_view_menu(view_menu, perm)
 
         logger.info("Creating missing datasource permissions.")
-        datasources = SqlaTable.get_all_datasources()
+        datasources = SqlaTable.get_all_datasources(self.get_session)
         for datasource in datasources:
             merge_pv("datasource_access", datasource.get_perm())
             merge_pv("schema_access", datasource.get_schema_perm())
@@ -865,7 +821,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         """
 
         logger.info("Cleaning faulty perms")
-        pvms = self.get_session.query(PermissionView).filter(
+        sesh = self.get_session
+        pvms = sesh.query(PermissionView).filter(
             or_(
                 PermissionView.permission  # pylint: disable=singleton-comparison
                 == None,
@@ -873,7 +830,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                 == None,
             )
         )
-        self.get_session.commit()
+        sesh.commit()
         if deleted_count := pvms.delete():
             logger.info("Deleted %i faulty permissions", deleted_count)
 
@@ -1992,7 +1949,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
                 if not (schema_perm and self.can_access("schema_access", schema_perm)):
                     datasources = SqlaTable.query_datasources_by_name(
-                        database, table_.table, schema=table_.schema
+                        self.get_session, database, table_.table, schema=table_.schema
                     )
 
                     # Access to any datasource is suffice.
@@ -2009,20 +1966,29 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                     self.get_table_access_error_object(denied)
                 )
 
-        # Guest users MUST not modify the payload so it's requesting a
-        # different chart or different ad-hoc metrics from what's saved.
-        if (
-            query_context
-            and self.is_guest_user()
-            and query_context_modified(query_context)
-        ):
-            raise SupersetSecurityException(
-                SupersetError(
-                    error_type=SupersetErrorType.DASHBOARD_SECURITY_ACCESS_ERROR,
-                    message=_("Guest user cannot modify chart payload"),
-                    level=ErrorLevel.ERROR,
+        if self.is_guest_user() and query_context:
+            # Guest users MUST not modify the payload so it's requesting a different
+            # chart or different ad-hoc metrics from what's saved.
+            form_data = query_context.form_data
+            stored_chart = query_context.slice_
+
+            if (
+                form_data is None
+                or stored_chart is None
+                or form_data.get("slice_id") != stored_chart.id
+                or form_data.get("metrics", []) != stored_chart.params_dict["metrics"]
+                or any(
+                    query.metrics != stored_chart.params_dict["metrics"]
+                    for query in query_context.queries
                 )
-            )
+            ):
+                raise SupersetSecurityException(
+                    SupersetError(
+                        error_type=SupersetErrorType.DASHBOARD_SECURITY_ACCESS_ERROR,
+                        message=_("Guest user cannot modify chart payload"),
+                        level=ErrorLevel.ERROR,
+                    )
+                )
 
         if datasource or query_context or viz:
             form_data = None
