@@ -176,6 +176,7 @@ def add_pvms(
             pvms.append(_add_permission_view(session, new_permission, new_view))
     if commit:
         session.commit()
+    logger.info(pvms)
     return pvms
 
 

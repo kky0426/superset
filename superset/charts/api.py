@@ -165,6 +165,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
         "cache_timeout",
         "changed_by.first_name",
         "changed_by.last_name",
+        "changed_by.id",
         "changed_by_name",
         "changed_on_delta_humanized",
         "changed_on_dttm",
@@ -806,7 +807,7 @@ class ChartRestApi(BaseSupersetModelRestApi):
             try:
                 for file_name, file_content in ExportChartsCommand(requested_ids).run():
                     with bundle.open(f"{root}/{file_name}", "w") as fp:
-                        fp.write(file_content.encode())
+                        fp.write(file_content().encode())
             except ChartNotFoundError:
                 return self.response_404()
         buf.seek(0)

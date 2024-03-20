@@ -2,4 +2,4 @@
 
 docker-compose down -v
 docker build -t custom-superset-v1 .
-docker-compose -f docker-compose-non-dev.yml up -d
+docker-compose -f docker-compose-image-tag.yml up -d
