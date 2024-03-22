@@ -86,6 +86,8 @@ if TYPE_CHECKING:
     from superset.sql_parse import Table
     from superset.viz import BaseViz
 
+from superset.config import CAN_VIEW_MASKED_DATA_ROLE
+
 logger = logging.getLogger(__name__)
 
 DATABASE_PERM_REGEX = re.compile(r"^\[.+\]\.\(id\:(?P<id>\d+)\)$")
@@ -847,9 +849,10 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
         # Creating default roles
         self.set_role("Admin", self._is_admin_pvm, pvms)
-        self.set_role("Alpha", self._is_alpha_pvm, pvms)
-        self.set_role("Gamma", self._is_gamma_pvm, pvms)
+        # self.set_role("Alpha", self._is_alpha_pvm, pvms)
+        # self.set_role("Gamma", self._is_gamma_pvm, pvms)
         self.set_role("sql_lab", self._is_sql_lab_pvm, pvms)
+        self.add_role(CAN_VIEW_MASKED_DATA_ROLE, [])
 
         # Configure public role
         if current_app.config["PUBLIC_ROLE_LIKE"]:

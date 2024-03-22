@@ -69,7 +69,7 @@ from superset.sqllab.utils import masking_in_dicionary_value
 from superset.utils.s3_logger import S3Handler
 import os
 from flask import g
-from superset.config import CAN_VIEW_MASKED_DATA_ROLE
+from superset.config import CAN_VIEW_MASKED_DATA
 
 config = app.config
 logger = logging.getLogger(__name__)
@@ -345,7 +345,7 @@ class SqlLabRestApi(BaseSupersetApi):
         rows = params.get("rows")
         result = SqlExecutionResultsCommand(key=key, rows=rows).run()
 
-        if security_manager.find_role(CAN_VIEW_MASKED_DATA_ROLE) not in g.user.roles:
+        if security_manager.find_role(CAN_VIEW_MASKED_DATA) not in g.user.roles:
           result["data"] = list(map(lambda item: masking_in_dicionary_value(item), result["data"]))
 
         # return the result without special encoding

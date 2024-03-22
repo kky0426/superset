@@ -239,7 +239,7 @@ SQLALCHEMY_ENCRYPTED_FIELD_TYPE_ADAPTER = (  # pylint: disable=invalid-name
 QUERY_SEARCH_LIMIT = 1000
 
 MASKING_COLUMN_LIST = ["phone"]
-CAN_VIEW_MASKED_DATA_ROLE = "Admin"
+CAN_VIEW_MASKED_DATA_ROLE = "can_view_masked_data"
 # Flask-WTF flag for CSRF
 WTF_CSRF_ENABLED = True
 
