@@ -25,7 +25,7 @@ from flask_appbuilder.api import expose, protect, rison, safe
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from marshmallow import ValidationError
 
-from superset import app, is_feature_enabled
+from superset import app, is_feature_enabled, security_manager
 from superset.commands.sql_lab.estimate import QueryEstimationCommand
 from superset.commands.sql_lab.execute import CommandResult, ExecuteSqlCommand
 from superset.commands.sql_lab.export import SqlResultExportCommand
@@ -68,6 +68,7 @@ from superset.views.base_api import BaseSupersetApi, requires_json, statsd_metri
 from superset.sqllab.utils import masking_in_dicionary_value
 from superset.utils.s3_logger import S3Handler
 import os
+from flask import g
 
 config = app.config
 logger = logging.getLogger(__name__)
@@ -342,7 +343,11 @@ class SqlLabRestApi(BaseSupersetApi):
         key = params.get("key")
         rows = params.get("rows")
         result = SqlExecutionResultsCommand(key=key, rows=rows).run()
-        result["data"] = list(map(lambda item: masking_in_dicionary_value(item), result["data"]))
+
+        
+        if security_manager.find_role(security_manager.CAN_VIEW_MASKED_DATA) not in g.user.roles:
+          result["data"] = list(map(lambda item: masking_in_dicionary_value(item), result["data"]))
+
         # return the result without special encoding
         return json_success(
             json.dumps(
