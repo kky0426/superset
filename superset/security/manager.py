@@ -86,7 +86,6 @@ if TYPE_CHECKING:
     from superset.sql_parse import Table
     from superset.viz import BaseViz
 
-from superset.config import CAN_VIEW_MASKED_DATA_ROLE
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +155,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
     userstatschartview = None
     READ_ONLY_MODEL_VIEWS = {"Database", "DynamicPlugin"}
+    
+    CAN_VIEW_MASKED_DATA = "can_view_masked_data"
 
     USER_MODEL_VIEWS = {
         "RegisterUserModelView",
@@ -852,7 +853,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         # self.set_role("Alpha", self._is_alpha_pvm, pvms)
         # self.set_role("Gamma", self._is_gamma_pvm, pvms)
         self.set_role("sql_lab", self._is_sql_lab_pvm, pvms)
-        self.add_role(CAN_VIEW_MASKED_DATA_ROLE, [])
+        self.add_role(self.CAN_VIEW_MASKED_DATA, [])
 
         # Configure public role
         if current_app.config["PUBLIC_ROLE_LIKE"]:

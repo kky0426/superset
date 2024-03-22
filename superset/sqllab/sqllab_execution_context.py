@@ -34,7 +34,6 @@ from superset.utils.dates import now_as_float
 from superset.views.utils import get_cta_schema_name
 from superset.sqllab.utils import masking_in_dicionary_value
 from flask import g 
-from superset.config import CAN_VIEW_MASKED_DATA
 
 if TYPE_CHECKING:
     from superset.connectors.sqla.models import Database
