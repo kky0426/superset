@@ -344,7 +344,6 @@ class SqlLabRestApi(BaseSupersetApi):
         rows = params.get("rows")
         result = SqlExecutionResultsCommand(key=key, rows=rows).run()
 
-        masking_sql_results(result)
         if security_manager.find_role(security_manager.CAN_VIEW_MASKED_DATA) not in g.user.roles:
           result = masking_sql_results(result)
 
