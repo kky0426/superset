@@ -65,7 +65,7 @@ from superset.superset_typing import FlaskResponse
 from superset.utils import core as utils
 from superset.views.base import CsvResponse, generate_download_headers, json_success
 from superset.views.base_api import BaseSupersetApi, requires_json, statsd_metrics
-from superset.sqllab.utils import masking_in_dicionary_value
+from superset.sqllab.utils import masking_sql_results
 from superset.utils.s3_logger import S3Handler
 import os
 from flask import g
@@ -344,9 +344,8 @@ class SqlLabRestApi(BaseSupersetApi):
         rows = params.get("rows")
         result = SqlExecutionResultsCommand(key=key, rows=rows).run()
 
-        
         if security_manager.find_role(security_manager.CAN_VIEW_MASKED_DATA) not in g.user.roles:
-          result["data"] = list(map(lambda item: masking_in_dicionary_value(item), result["data"]))
+          result = masking_sql_results(result)
 
         # return the result without special encoding
         return json_success(
