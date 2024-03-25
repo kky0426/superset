@@ -25,6 +25,9 @@ from superset.common.db_query_status import QueryStatus
 from superset.config import MASKING_COLUMN_LIST
 from superset.daos.database import DatabaseDAO
 from superset.models.sql_lab import Query, TabState
+import sqlparse, logging
+
+logger = logging.getLogger()
 
 DATABASE_KEYS = [
     "allow_file_upload",
@@ -41,6 +44,7 @@ DATABASE_KEYS = [
     "disable_data_preview",
 ]
 
+SqlResults = dict[str, Any]
 
 def apply_display_max_row_configuration_if_require(  # pylint: disable=invalid-name
     sql_results: dict[str, Any], max_rows_in_result: int
@@ -79,12 +83,45 @@ def write_ipc_buffer(table: pa.Table) -> pa.Buffer:
     return sink.getvalue()
 
 
+def masking_sql_results(sql_results: SqlResults) -> SqlResults:
+    sql = sql_results["query"]["sql"]
+    alias_dict = get_origin_column_from_alias(sql)   
+    sql_results["data"] = list(map(lambda item: mask_by_column_name(item, alias_dict), sql_results["data"]))
+    return sql_results
 
-def masking_in_dicionary_value(dic: dict[str, Any]) -> dict:
-    for key,value in dic.items():
-        if key in MASKING_COLUMN_LIST:
-            dic[key] = "*"*len(str(value))
-    return dic
+
+"""
+    return dictionary {"alias" : "origin_column_name"}
+"""
+def get_origin_column_from_alias(sql: str) -> dict:
+    statement = sqlparse.parse(sql)[0]
+    columns = []
+
+    # select 절에서 조회할 컬럼들을 분리 
+    for token in statement.tokens:
+        logger.info(token)
+        if isinstance(token, sqlparse.sql.IdentifierList):
+            for identifier in token.get_identifiers():
+                columns.append(str(identifier))
+        elif isinstance(token, sqlparse.sql.Identifier):
+            columns.append(str(token))
+        elif token.ttype is sqlparse.tokens.Keyword:
+            break
+
+    alias_dict = {}
+    for column in columns:
+        # [name, as, n] 과 같이 분리         
+        split_word_list = column.split()
+        if len(split_word_list) == 3 and split_word_list[1].lower() == "as":
+            alias_dict[split_word_list[2]] = split_word_list[0]
+    logger.info(alias_dict)
+    return alias_dict
+
+def mask_by_column_name(data: dict[str, Any], alias_dict: dict[str, Any]) -> dict:
+    for key,value in data.items():
+        if key in MASKING_COLUMN_LIST or (key in alias_dict.keys() and alias_dict[key] in MASKING_COLUMN_LIST):
+            data[key] = "*"*len(str(value))
+    return data
 
 def bootstrap_sqllab_data(user_id: int | None) -> dict[str, Any]:
     tabs_state: list[Any] = []

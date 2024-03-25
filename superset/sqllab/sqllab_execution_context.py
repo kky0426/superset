@@ -32,7 +32,7 @@ from superset.utils import core as utils
 from superset.utils.core import apply_max_row_limit, get_user_id
 from superset.utils.dates import now_as_float
 from superset.views.utils import get_cta_schema_name
-from superset.sqllab.utils import masking_in_dicionary_value
+from superset.sqllab.utils import masking_sql_results
 from flask import g 
 
 if TYPE_CHECKING:
@@ -139,11 +139,8 @@ class SqlJsonExecutionContext:  # pylint: disable=too-many-instance-attributes
 
     ### 개발자 도구에서 masking 된 데이터의 원본이 노출 되어 해당함수에도 masking 처리 
     def get_execution_result(self) -> SqlResults | None:
-        masked_result = self._sql_result
-        if masked_result["data"]:
-            masked_result["data"] = list(map(lambda item: masking_in_dicionary_value(item), masked_result["data"]))
-        return masked_result
-
+        return masking_sql_results(self._sql_result)
+    
     def set_execution_result(self, sql_result: SqlResults | None) -> None:
         self._sql_result = sql_result
 
