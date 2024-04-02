@@ -221,35 +221,35 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
     if (!otherTabFilters) {
       return;
     }
-    const activeTab = getItem(LocalStorageKeys.HomepageActivityFilter, null);
-    setActiveState(collapseState.length > 0 ? collapseState : DEFAULT_TAB_ARR);
-    getRecentActivityObjs(user.userId!, recent, addDangerToast, otherTabFilters)
-      .then(res => {
-        const data: ActivityData | null = {};
-        data[TableTab.Other] = res.other;
-        if (res.viewed) {
-          const filtered = reject(res.viewed, ['item_url', null]).map(r => r);
-          data[TableTab.Viewed] = filtered;
-          if (!activeTab && data[TableTab.Viewed]) {
-            setActiveChild(TableTab.Viewed);
-          } else if (!activeTab && !data[TableTab.Viewed]) {
-            setActiveChild(TableTab.Created);
-          } else setActiveChild(activeTab || TableTab.Created);
-        } else if (!activeTab) setActiveChild(TableTab.Created);
-        else setActiveChild(activeTab);
-        setActivityData(activityData => ({ ...activityData, ...data }));
-      })
-      .catch(
-        createErrorHandler((errMsg: unknown) => {
-          setActivityData(activityData => ({
-            ...activityData,
-            [TableTab.Viewed]: [],
-          }));
-          addDangerToast(
-            t('There was an issue fetching your recent activity: %s', errMsg),
-          );
-        }),
-      );
+    // const activeTab = getItem(LocalStorageKeys.HomepageActivityFilter, null);
+    // setActiveState(collapseState.length > 0 ? collapseState : DEFAULT_TAB_ARR);
+    // getRecentActivityObjs(user.userId!, recent, addDangerToast, otherTabFilters)
+    //   .then(res => {
+    //     const data: ActivityData | null = {};
+    //     data[TableTab.Other] = res.other;
+    //     if (res.viewed) {
+    //       const filtered = reject(res.viewed, ['item_url', null]).map(r => r);
+    //       data[TableTab.Viewed] = filtered;
+    //       if (!activeTab && data[TableTab.Viewed]) {
+    //         setActiveChild(TableTab.Viewed);
+    //       } else if (!activeTab && !data[TableTab.Viewed]) {
+    //         setActiveChild(TableTab.Created);
+    //       } else setActiveChild(activeTab || TableTab.Created);
+    //     } else if (!activeTab) setActiveChild(TableTab.Created);
+    //     else setActiveChild(activeTab);
+    //     setActivityData(activityData => ({ ...activityData, ...data }));
+    //   })
+    //   .catch(
+    //     createErrorHandler((errMsg: unknown) => {
+    //       setActivityData(activityData => ({
+    //         ...activityData,
+    //         [TableTab.Viewed]: [],
+    //       }));
+    //       addDangerToast(
+    //         t('There was an issue fetching your recent activity: %s', errMsg),
+    //       );
+    //     }),
+    //   );
 
     // Sets other activity data in parallel with recents api call
     const ownSavedQueryFilters = [
@@ -260,28 +260,28 @@ function Welcome({ user, addDangerToast }: WelcomeProps) {
       },
     ];
     Promise.all([
-      getUserOwnedObjects(id, 'dashboard')
-        .then(r => {
-          setDashboardData(r);
-          return Promise.resolve();
-        })
-        .catch((err: unknown) => {
-          setDashboardData([]);
-          addDangerToast(
-            t('There was an issue fetching your dashboards: %s', err),
-          );
-          return Promise.resolve();
-        }),
-      getUserOwnedObjects(id, 'chart')
-        .then(r => {
-          setChartData(r);
-          return Promise.resolve();
-        })
-        .catch((err: unknown) => {
-          setChartData([]);
-          addDangerToast(t('There was an issue fetching your chart: %s', err));
-          return Promise.resolve();
-        }),
+      // getUserOwnedObjects(id, 'dashboard')
+      //   .then(r => {
+      //     setDashboardData(r);
+      //     return Promise.resolve();
+      //   })
+      //   .catch((err: unknown) => {
+      //     setDashboardData([]);
+      //     addDangerToast(
+      //       t('There was an issue fetching your dashboards: %s', err),
+      //     );
+      //     return Promise.resolve();
+      //   }),
+      // getUserOwnedObjects(id, 'chart')
+      //   .then(r => {
+      //     setChartData(r);
+      //     return Promise.resolve();
+      //   })
+      //   .catch((err: unknown) => {
+      //     setChartData([]);
+      //     addDangerToast(t('There was an issue fetching your chart: %s', err));
+      //     return Promise.resolve();
+      //   }),
       canReadSavedQueries
         ? getUserOwnedObjects(id, 'saved_query', ownSavedQueryFilters)
             .then(r => {
