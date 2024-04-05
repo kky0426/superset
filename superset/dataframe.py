@@ -34,6 +34,11 @@ def _convert_big_integers(val: Any) -> Any:
     :returns: the same value but recast as a string if it was an integer over
         ``JS_MAX_INTEGER``
     """
+    if isinstance(val, bytes):
+        try:
+            return val.decode("utf-8")
+        except:
+            return val.hex()
     return str(val) if isinstance(val, int) and abs(val) > JS_MAX_INTEGER else val
 
 
