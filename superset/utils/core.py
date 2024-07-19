@@ -499,6 +499,8 @@ def json_iso_dttm_ser(obj: Any, pessimistic: bool = False) -> Any:
     """
 
     if isinstance(obj, (datetime, date, pd.Timestamp)):
+        if pd.isnull(obj):
+            return None
         return obj.isoformat()
 
     try:
@@ -528,6 +530,8 @@ def json_int_dttm_ser(obj: Any) -> Any:
     :returns: The JSON compatible form
     :raises TypeError: If the object cannot be serialized
     """
+    logger.info("int util function")
+    logger.info(obj)
 
     if isinstance(obj, (datetime, pd.Timestamp)):
         return datetime_to_epoch(obj)
