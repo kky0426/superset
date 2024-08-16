@@ -1231,6 +1231,13 @@ class SqlaTable(
         return self.type
 
     @property
+    def table_full_name(self) -> str:
+        return f"{self.database.perm}.[{self.schema}].[{self.table_name}]"
+
+    @property
+    def column_full_names(self) -> list[str]:
+        return [f"{self.table_full_name}.{c}" for c in self.column_names]
+    @property
     def database_name(self) -> str:
         return self.database.name
 
@@ -1858,6 +1865,7 @@ class SqlaTable(
         datasource_name: str,
         schema: str | None = None,
     ) -> list[SqlaTable]:
+        logger.info("query_datasources_by_name")
         query = (
             db.session.query(cls)
             .filter_by(database_id=database.id)
