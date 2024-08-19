@@ -35,9 +35,6 @@ from flask_appbuilder.security.sqla.models import (
     User,
     ViewMenu,
 )
-
-import superset.security.custom_view as custom
-
 from flask_appbuilder.widgets import ListWidget
 from flask_babel import lazy_gettext as _
 from flask_login import AnonymousUserMixin, LoginManager
@@ -48,6 +45,7 @@ from sqlalchemy.orm import eagerload
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.query import Query as SqlaQuery
 
+import superset.security.custom_view as custom
 from superset import sql_parse
 from superset.constants import RouteMethod
 from superset.errors import ErrorLevel, SupersetError, SupersetErrorType
@@ -433,6 +431,16 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
         return self.can_access("table_deny", datasource.table_full_name)
 
+    def cannot_access_column(self, datasource: "BaseDatasource", column: str) -> bool:
+        """
+        Return True if the user can access the column associated with specified
+        datasource, False otherwise.
+
+        :param datasource: The datasource
+        :returns: Whether the user can not access the datasource's table
+        """
+
+        return self.can_access("column_deny", f"{datasource.table_full_name}.{column}")
     def cannot_access_table(self, database: "Database", table: "Table") -> bool:
         """
         Return True if the user can access the table associated with specified
@@ -444,6 +452,16 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
         return self.can_access("table_deny", f"{database.perm}.[{table.schema}].[{table.table}]")
 
+    def cannot_access_column(self, database: "Database", table: "Table", column: str) -> bool:
+        """
+        Return True if the user can access the column associated with specified
+        datasource, False otherwise.
+
+        :param datasource: The datasource
+        :returns: Whether the user can not access the datasource's table
+        """
+
+        return self.can_access("column_deny", f"{database.perm}.[{table.schema}].[{table.table}].{column}")
     def can_access_datasource(self, datasource: "BaseDatasource") -> bool:
         """
         Return True if the user can access the specified datasource, False otherwise.
@@ -582,6 +600,17 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         return f"""You need access to the following tables: {", ".join(quoted_tables)},
             `all_database_access` or `all_datasource_access` permission"""
 
+    def get_column_access_error_msg(self, columns: set[str]) -> str:
+        """
+        Return the error message for the denied SQL columns.
+
+        :param columns: The set of denied SQL columns
+        :returns: The error message
+        """
+
+        quoted_columns = [f"`{column}`" for column in columns]
+        return f"""You need access to the following columns: {", ".join(quoted_columns)},
+            `all_database_access` or `all_datasource_access` permission"""
     def get_table_access_error_object(self, tables: set["Table"]) -> SupersetError:
         """
         Return the error object for the denied SQL tables.
@@ -596,6 +625,23 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             extra={
                 "link": self.get_table_access_link(tables),
                 "tables": [str(table) for table in tables],
+            },
+        )
+
+    def get_column_access_error_object(self, columns: set[str]) -> SupersetError:
+        """
+        Return the error object for the denied SQL columns.
+
+        :param columns: The set of denied SQL columns
+        :returns: The error object
+        """
+        return SupersetError(
+            error_type=SupersetErrorType.COLUMN_SECURITY_ACCESS_ERROR,
+            message=self.get_column_access_error_msg(columns),
+            level=ErrorLevel.ERROR,
+            extra={
+                "link": self.get_table_access_link(columns),
+                "columns": [str(column) for column in columns],
             },
         )
 
@@ -1970,7 +2016,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             if query:
                 default_schema = database.get_default_schema_for_query(query)
                 tables = {
-                    Table(table_.table, table_.schema or default_schema)
+                    Table(table_.table, table_.schema or default_schema, columns=table_.columns)
                     for table_ in sql_parse.ParsedQuery(
                         query.sql,
                         engine=database.db_engine_spec.engine,
@@ -1993,6 +2039,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                         self.get_session, database, table_.table, schema=table_.schema
                     )
 
+
                     # Access to any datasource is suffice.
                     for datasource_ in datasources:
                         if self.can_access(
@@ -2007,6 +2054,16 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                     self.get_table_access_error_object(denied)
                 )
 
+            denied_columns = set()
+            for table_ in tables:
+                for column in table_.columns:
+                    if self.cannot_access_column(database, table_, column):
+                        denied_columns.add(f"{table_.table}.{column}")
+
+            if denied_columns:
+                raise SupersetSecurityException(
+                    self.get_column_access_error_object(denied_columns)
+                )
 
         if self.is_guest_user() and query_context:
             # Guest users MUST not modify the payload so it's requesting a different
@@ -2306,7 +2363,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         """
 
         # pylint: disable=import-outside-toplevel
-        from superset import is_feature_enabled
         from superset.dashboards.commands.exceptions import DashboardAccessDeniedError
 
         raise DashboardAccessDeniedError()

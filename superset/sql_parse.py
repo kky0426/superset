@@ -60,6 +60,7 @@ from sqlparse.utils import imt
 
 from superset.exceptions import QueryClauseValidationException, SupersetParseError
 from superset.utils.backports import StrEnum
+from collections import defaultdict
 
 try:
     from sqloxide import parse_sql as sqloxide_parse
@@ -80,7 +81,6 @@ lex = Lexer.get_default_instance()
 sqlparser_sql_regex = keywords.SQL_REGEX
 sqlparser_sql_regex.insert(25, (r"'(''|\\\\|\\|[^'])*'", sqlparse.tokens.String.Single))
 lex.set_SQL_REGEX(sqlparser_sql_regex)
-
 
 # mapping between DB engine specs and sqlglot dialects
 SQLGLOT_DIALECTS = {
@@ -237,6 +237,7 @@ class Table:
     table: str
     schema: str | None = None
     catalog: str | None = None
+    columns: frozenset | None = None
 
     def __str__(self) -> str:
         """
@@ -294,11 +295,25 @@ def extract_tables_from_statement(
             if isinstance(source, exp.Table) and not is_cte(source, scope)
         ]
 
+    columns = statement.find_all(exp.Column, exp.Star)
+    column_table_map = defaultdict(set)
+    for column in columns:
+
+        if column.table == '':
+            subquery = column.parent
+            from_expr = subquery.find(exp.From)
+            if from_expr and from_expr.alias_or_name is not None:
+                column_table_map[from_expr.alias_or_name].add(column.name)
+        else:
+            column_table_map[column.table].add(column.name)
+
     return {
         Table(
             source.name,
             source.db if source.db != "" else None,
             source.catalog if source.catalog != "" else None,
+            frozenset(column_table_map[
+                          source.alias_or_name]) if source.alias_or_name in column_table_map else None,
         )
         for source in sources
     }
@@ -471,6 +486,11 @@ class ParsedQuery:
             logger.warning("Unable to parse SQL (%s): %s", self._dialect, self.sql)
             return set()
 
+        tables = set()
+        for statement in statements:
+            for table in extract_tables_from_statement(statement, self._dialect):
+                tables.add(table)
+
         return {
             table
             for statement in statements
@@ -492,9 +512,11 @@ class ParsedQuery:
         """
         sources: Iterable[exp.Table]
 
+        logger.info("_extract_tables_from_statement")
         if isinstance(statement, exp.Describe):
             # A `DESCRIBE` query has no sources in sqlglot, so we need to explicitly
             # query for all tables.
+            logger.info(statement.find_all(exp.Column))
             sources = statement.find_all(exp.Table)
         elif isinstance(statement, exp.Command):
             # Commands, like `SHOW COLUMNS FROM foo`, have to be converted into a
@@ -508,6 +530,7 @@ class ParsedQuery:
                     dialect=self._dialect,
                 )
                 sources = pseudo_query.find_all(exp.Table)
+                logger.info(pseudo_query.find_all(exp.Column))
             except SqlglotError:
                 return set()
         else:
@@ -544,7 +567,7 @@ class ParsedQuery:
             name
             for name, parent_scope in parent_sources.items()
             if isinstance(parent_scope, Scope)
-            and parent_scope.scope_type == ScopeType.CTE
+               and parent_scope.scope_type == ScopeType.CTE
         }
 
         return source.name in ctes_in_scope
@@ -1098,7 +1121,7 @@ def insert_rls_in_predicate(
                 Token(Punctuation, "("),
             ]
             i = token_list.tokens.index(token)
-            token.parent.tokens[i + 1 : i + 1] = tokens
+            token.parent.tokens[i + 1: i + 1] = tokens
             i += len(tokens) + 2
 
             # close parenthesis after last existing comparison
@@ -1108,13 +1131,13 @@ def insert_rls_in_predicate(
                 if (
                     sibling.ttype == Keyword
                     and not imt(
-                        sibling, m=[(Keyword, "AND"), (Keyword, "OR"), (Keyword, "NOT")]
-                    )
+                    sibling, m=[(Keyword, "AND"), (Keyword, "OR"), (Keyword, "NOT")]
+                )
                     or isinstance(sibling, Where)
                 ):
                     j -= 1
                     break
-            token.parent.tokens[i + j + 1 : i + j + 1] = [
+            token.parent.tokens[i + j + 1: i + j + 1] = [
                 Token(Whitespace, " "),
                 Token(Punctuation, ")"),
                 Token(Whitespace, " "),
