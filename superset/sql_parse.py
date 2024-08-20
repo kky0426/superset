@@ -299,7 +299,7 @@ def extract_tables_from_statement(
     column_table_map = defaultdict(set)
     for column in columns:
 
-        if column.table == '':
+        if isinstance(column, exp.Star) or not column.table:
             subquery = column.parent
             from_expr = subquery.find(exp.From)
             if from_expr and from_expr.alias_or_name is not None:

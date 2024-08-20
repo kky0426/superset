@@ -336,6 +336,17 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         database_name = schema_permission.split(".")[0][1:-1]
         return DatabaseAndSchema(database_name, schema_name)
 
+    def _get_denied_column_permissions(self, permission_format_table_name: str) -> set[str]:
+        user = g.user
+
+        denied = set()
+        for role in user.roles:
+            for perm in role.permissions:
+                if perm.permission.name == "column_deny" and perm.view_menu.name.startswith(permission_format_table_name):
+                    denied.add(perm.view_menu.name)
+
+        return denied
+
     def can_access(self, permission_name: str, view_name: str) -> bool:
         """
         Return True if the user can access the FAB permission/view, False otherwise.
@@ -398,10 +409,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             or self.can_access("database_access", database.perm)  # type: ignore
         )
 
-    def deny_database(self, database: "Database") -> bool:
-        return (
-            self.can_access()
-        )
 
     def can_access_schema(self, datasource: "BaseDatasource") -> bool:
         """
@@ -411,9 +418,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         :param datasource: The datasource
         :returns: Whether the user can access the datasource's schema
         """
-        logger.info("can_access_schema")
-        logger.info(datasource)
-
         return (
             self.can_access_all_datasources()
             or self.can_access_database(datasource.database)
@@ -441,6 +445,13 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         """
 
         return self.can_access("column_deny", f"{datasource.table_full_name}.{column}")
+
+    def get_denied_columns(self, datasource: "BaseDatasource") -> set[str]:
+        """ Return the set of denied columns for the datasource """
+
+        permissions = self._get_denied_column_permissions(datasource.table_full_name)
+        return set(map(lambda p: f"{datasource.name}.{p.split('.')[-1]}", permissions))
+
     def cannot_access_table(self, database: "Database", table: "Table") -> bool:
         """
         Return True if the user can access the table associated with specified
@@ -462,6 +473,12 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         """
 
         return self.can_access("column_deny", f"{database.perm}.[{table.schema}].[{table.table}].{column}")
+
+    def get_denied_columns(self, database: "Database", table: "Table") -> set[str]:
+        """ Return the set of denied columns for the datasource """
+        permissions = self._get_denied_column_permissions(f"{database.perm}.[{table.schema}].[{table.table}]")
+        return set(map(lambda p: f"{table.table}.{p.split('.')[-1]}", permissions))
+
     def can_access_datasource(self, datasource: "BaseDatasource") -> bool:
         """
         Return True if the user can access the specified datasource, False otherwise.
@@ -2056,9 +2073,12 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
             denied_columns = set()
             for table_ in tables:
-                for column in table_.columns:
-                    if self.cannot_access_column(database, table_, column):
-                        denied_columns.add(f"{table_.table}.{column}")
+                if "*" in table_.columns:
+                    denied_columns.update(self.get_denied_columns(database, table_))
+                else:
+                    for column in table_.columns:
+                        if self.cannot_access_column(database, table_, column):
+                            denied_columns.add(f"{table_.table}.{column}")
 
             if denied_columns:
                 raise SupersetSecurityException(
