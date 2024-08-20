@@ -237,7 +237,7 @@ class Table:
     table: str
     schema: str | None = None
     catalog: str | None = None
-    columns: frozenset | None = None
+    columns: tuple | None = None
 
     def __str__(self) -> str:
         """
@@ -312,7 +312,7 @@ def extract_tables_from_statement(
             source.name,
             source.db if source.db != "" else None,
             source.catalog if source.catalog != "" else None,
-            frozenset(column_table_map[
+            tuple(column_table_map[
                           source.alias_or_name]) if source.alias_or_name in column_table_map else None,
         )
         for source in sources
