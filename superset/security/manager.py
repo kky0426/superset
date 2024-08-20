@@ -2027,8 +2027,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
 
             database = cast("Database", database)
 
-            # if self.can_access_database(database):
-            #     return
 
             if query:
                 default_schema = database.get_default_schema_for_query(query)
@@ -2042,13 +2040,41 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
             elif table:
                 tables = {table}
 
-            denied = set()
 
+            ### DDP Custom Permission Check
+
+            denied_columns = set()
+            denied_tables = set()
 
             for table_ in tables:
                 if self.cannot_access_table(database, table_):
-                    denied.add(table_)
+                    denied_tables.add(table_)
                     continue
+
+                if "*" in table_.columns:
+                    denied_columns.update(self.get_denied_columns(database, table_))
+                else:
+                    for column in table_.columns:
+                        if self.cannot_access_column(database, table_, column):
+                            denied_columns.add(f"{table_.table}.{column}")
+
+            if denied_tables:
+                raise SupersetSecurityException(
+                    self.get_table_access_error_object(denied_tables)
+                )
+
+            if denied_columns:
+                raise SupersetSecurityException(
+                    self.get_column_access_error_object(denied_columns)
+                )
+
+            denied = set()
+
+            ### Superset Default Permission Check
+            if self.can_access_database(database):
+                return
+
+            for table_ in tables:
 
                 schema_perm = self.get_schema_perm(database, schema=table_.schema)
                 if not (schema_perm and self.can_access("schema_access", schema_perm)):
@@ -2071,19 +2097,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                     self.get_table_access_error_object(denied)
                 )
 
-            denied_columns = set()
-            for table_ in tables:
-                if "*" in table_.columns:
-                    denied_columns.update(self.get_denied_columns(database, table_))
-                else:
-                    for column in table_.columns:
-                        if self.cannot_access_column(database, table_, column):
-                            denied_columns.add(f"{table_.table}.{column}")
-
-            if denied_columns:
-                raise SupersetSecurityException(
-                    self.get_column_access_error_object(denied_columns)
-                )
 
         if self.is_guest_user() and query_context:
             # Guest users MUST not modify the payload so it's requesting a different
