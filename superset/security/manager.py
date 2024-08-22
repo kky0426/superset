@@ -177,6 +177,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         "Log",
         "List Users",
         "List Roles",
+        "List Permissions",
         "ResetPasswordView",
         "RoleModelView",
         "Row Level Security",
@@ -868,6 +869,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         """
         Create custom FAB permissions.
         """
+        logger.info("Creating custom permissions")
         self.add_permission_view_menu("all_datasource_access", "all_datasource_access")
         self.add_permission_view_menu("all_database_access", "all_database_access")
         self.add_permission_view_menu("all_query_access", "all_query_access")
@@ -876,6 +878,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         self.add_permission_view_menu("can_share_chart", "Superset")
         self.add_permission_view_menu("can_view_query", "Dashboard")
         self.add_permission_view_menu("can_view_chart_as_table", "Dashboard")
+        self.add_permission_view_menu("menu_access", "List Permissions")
 
     def create_missing_perms(self) -> None:
         """
@@ -901,12 +904,8 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         datasources = SqlaTable.get_all_datasources()
         for datasource in datasources:
             logger.info("datasource: %s", datasource.full_name)
-            logger.info(datasource)
             merge_pv("datasource_access", datasource.get_perm())
             merge_pv("schema_access", datasource.get_schema_perm())
-            merge_pv("table_deny", datasource.table_full_name)
-            for column in datasource.column_full_names:
-                merge_pv("column_deny", column)
         logger.info("Creating missing database permissions.")
         databases = self.get_session.query(models.Database).all()
         for database in databases:

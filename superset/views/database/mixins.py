@@ -214,6 +214,8 @@ class DatabaseMixin:
             security_manager.add_permission_view_menu(
                 "schema_access", security_manager.get_schema_perm(database, schema)
             )
+            # print(database.get_all_table_names_in_schema(schema))
+
 
     def pre_add(self, database: Database) -> None:
         self._pre_add_update(database)

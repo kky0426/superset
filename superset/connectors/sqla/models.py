@@ -873,6 +873,9 @@ class TableColumn(AuditMixinNullable, ImportExportMixin, CertificationMixin, Mod
         return self.database.get_extra()
 
     @property
+    def column_full_name(self) -> str:
+        return f"{self.database.perm}.[{self.table.schema}].[{self.table.table_name}].{self.column_name}"
+    @property
     def type_generic(self) -> utils.GenericDataType | None:
         if self.is_dttm:
             return GenericDataType.TEMPORAL
@@ -1236,7 +1239,7 @@ class SqlaTable(
 
     @property
     def column_full_names(self) -> list[str]:
-        return [f"{self.table_full_name}.{c}" for c in self.column_names]
+        return [c.column_full_name for c in self.columns]
     @property
     def database_name(self) -> str:
         return self.database.name

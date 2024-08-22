@@ -191,7 +191,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         from superset.views.sqllab import SqllabView
         from superset.views.tags import TagModelView, TagView
         from superset.views.users.api import CurrentUserRestApi
-
+        from superset.views.custom_permission.views import CustomPermissionView
         #
         # Setup API views
         #
@@ -290,6 +290,16 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             category_icon="",
         )
 
+
+        appbuilder.add_view(
+            CustomPermissionView,
+            name="List Permissions",
+            label=__("List Permissions"),
+            category="Security",
+            icon="fa-lock",
+            category_icon="fa-cogs",
+        )
+
         #
         # Setup views with no menu
         #
@@ -321,6 +331,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         appbuilder.add_view_no_menu(TagView)
         appbuilder.add_view_no_menu(ReportView)
 
+
         #
         # Add links
         #
@@ -350,6 +361,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             category="SQL Lab",
             category_label=__("SQL Lab"),
         )
+
         appbuilder.add_view(
             TagModelView,
             "Tags",
@@ -372,6 +384,8 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
                 and self.config["SUPERSET_LOG_VIEW"]
             ),
         )
+
+
         appbuilder.add_api(SecurityRestApi)
         #
         # Conditionally setup email views
@@ -407,6 +421,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             category_label=__("Security"),
             icon="fa-lock",
         )
+
 
     def init_app_in_ctx(self) -> None:
         """

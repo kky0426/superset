@@ -1,0 +1,188 @@
+{#
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+#}
+{% import "superset/macros.html" as macros %}
+{% extends "appbuilder/base.html" %}
+
+
+{% block content %}
+<style>
+  .table-container tbody {
+    max-height: 450px; /* 원하는 높이로 조정하세요 */
+    overflow-y: scroll;
+    display: block;
+  }
+
+  .table-container thead {
+    display: table;
+    width: calc(100% - 1em);
+    background: #aaaaaa; /* 헤더 배경색 */
+  }
+
+  .table-container table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  #pvmTable td:nth-child(1) {
+    width: 30%;
+  }
+
+  #pvmTable td:nth-child(2) {
+    width: 70%;
+  }
+
+  #pvmTable th:nth-child(1) {
+    width: 30%;
+  }
+
+  #pvmTable th:nth-child(2) {
+    width: 70%;
+  }
+
+  h2 {
+    margin-top: 10px;
+  }
+</style>
+
+</head>
+<div class="table-container">
+  <h2>Table & Column Access Permission </h2>
+  <table id="pvmTable" class="table table-bordered">
+    <thead>
+    <tr>
+      <th>Permission</th>
+      <th>Table or Column **[db].(id).[schema].[table].column **</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for perm_view in pvm_list %}
+    <tr>
+      <td>{{ perm_view.permission.name }}</td>
+      <td>{{ perm_view.view_menu.name }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Add a new Permission</h2>
+<form method="post" action="/custompermission" enctype="multipart/form-data">
+  <input
+    type="hidden"
+    name="csrf_token"
+    id="csrf_token"
+    value="{{ csrf_token() if csrf_token else '' }}" />
+  <div class="form-group">
+    <label for="permission">Permission:</label>
+    <select class="form-control" name="permission" id="permission">
+      <option value="table_deny">Table Deny</option>
+      <option value="column_deny">Column Deny</option>
+    </select>
+  </div>
+  <label for="database">Database:</label>
+  <select class="form-control" name="database" id="database">
+    <option value="">Select Database</option>
+    {% for db in databases %}
+    <option value="{{ db.id }}">{{ db }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="schema">Schema:</label>
+  <select class="form-control" name="schema" id="schema" disabled>
+    <option value="">Select Schema</option>
+  </select>
+
+  <label for="table">Table:</label>
+  <select class="form-control" name="table" id="table" disabled>
+    <option value="">Select Table</option>
+  </select>
+
+  <label for="table">Column:</label>
+  <select class="form-control" name="column" id="column" disabled>
+    <option value="">Select Column</option>
+  </select>
+  <br>
+  <button type="submit" class="btn btn-primary">Add Permission</button>
+</form>
+
+<script nonce="{{ macros.get_nonce() }}">
+    async function fetchData(apiPath) {
+        const response = await fetch(apiPath);
+        const data = await response.json();
+        return data;
+    }
+
+    function createDropdown(data, dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        dropdown.innerHTML = ''; // clear existing options
+        data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.name;
+            option.text = item.name;
+            dropdown.add(option);
+        });
+    }
+
+    let permission = null;
+    let databaseId = null;
+    let schemaName = null;
+    let tableName = null;
+
+    document.getElementById('permission').addEventListener('change', function() {
+      permission = this.value;
+      const databaseDropdown = document.getElementById('database');
+      const schemaDropdown = document.getElementById('schema');
+      const tableDropdown = document.getElementById('table');
+      if (permission === 'column_deny' && databaseDropdown.value && schemaDropdown.value && tableDropdown.value) {
+        document.getElementById('column').disabled = false;
+      } else {
+        document.getElementById('column').disabled = true;
+      }
+    });
+
+    document.getElementById('database').addEventListener('change', async function() {
+        databaseId = this.value;
+        console.log(databaseId)
+        const tableData = await fetchData(`/custompermission/${databaseId}/schemas`);
+        createDropdown(tableData, 'schema');
+        document.getElementById('schema').disabled = false;
+    });
+
+    document.getElementById('schema').addEventListener('change', async function() {
+        schemaName = this.value;
+        console.log(databaseId, schemaName)
+        const tableData = await fetchData(`/custompermission/${databaseId}/schemas/${schemaName}`);
+        createDropdown(tableData, 'table');
+        document.getElementById('table').disabled = false;
+    });
+
+    document.getElementById('table').addEventListener('change', async function() {
+        const tableName = this.value;
+        const columnData = await fetchData(`/custompermission/${databaseId}/schemas/${schemaName}/${tableName}`);
+        createDropdown(columnData, 'column');
+        if (permission === 'column_deny') {
+          document.getElementById('column').disabled = false;
+        }
+    });
+</script>
+
+
+{% endblock %}
+
